@@ -17,7 +17,7 @@
 
 module Redmine
   module Hook
-    include ActionController::UrlWriter
+    # include ActionController::UrlWriter
 
     @@listener_classes = []
     @@listeners = nil
@@ -93,7 +93,7 @@ module Redmine
       include ActionView::Helpers::UrlHelper
       include ActionView::Helpers::AssetTagHelper
       include ActionView::Helpers::TextHelper
-      include ActionController::UrlWriter
+      # include ActionController::UrlWriter
       include ApplicationHelper
 
       # Default to creating links using only the path.  Subclasses can
