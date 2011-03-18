@@ -42,6 +42,8 @@ module Rails
     def run
       load_initializer
 
+      # This block was added for bundler support while following setup
+      # instructions from http://gembundler.com/rails23.html
       Rails::Initializer.class_eval do
         def load_gems
           @bundler_loaded ||= Bundler.require :default, Rails.env
