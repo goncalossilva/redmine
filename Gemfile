@@ -2,7 +2,6 @@ source :rubygems
 source :rubyforge
 source :gemcutter
 
-gem "ruby-openid"
 gem 'bundler', '~> 1.0.0'
 gem 'rails', '2.3.11'
 gem 'rack' , '~> 1.1.1'
@@ -22,6 +21,9 @@ group :test do
   gem 'edavis10-object_daddy', :require => 'object_daddy'
 end
 
+group :openid do
+  gem "ruby-openid", '~> 2.1.4', :require => 'openid'
+end
 
 # Use the commented pure ruby gems, if you have not the needed prerequisites on
 # board to compile the native ones.  Note, that their use is discouraged, since
