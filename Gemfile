@@ -74,6 +74,6 @@ end
 
 # Load plugins Gemfiles
 Dir.glob(File.join(File.dirname(__FILE__), %w(vendor plugins * Gemfile))) do |file|
-  puts "Loading #{file} ..."
+  puts "Loading #{file} ..." if $DEBUG # `ruby -d` or `bundle -v`
   instance_eval File.read(file)
 end
