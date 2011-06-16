@@ -9,7 +9,7 @@ rescue LoadError
 end
 
 if Object.const_defined?(:OpenID)
-  config.to_prepare do
+  ActionDispatch::Callbacks.to_prepare do
     OpenID::Util.logger = Rails.logger
     ActionController::Base.send :include, OpenIdAuthentication
   end
