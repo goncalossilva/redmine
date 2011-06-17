@@ -1,15 +1,23 @@
+# source 'http://rubygems.org'
 source :rubygems
 source :rubyforge
 source :gemcutter
 
-gem 'bundler', '~> 1.0.0'
-gem 'rails', '2.3.11'
-gem 'rack' , '~> 1.1.1'
-gem 'i18n', '>= 0.4.2'
-gem 'rubytree', '0.5.2', :require => 'tree'
+# gem 'bundler', '~> 1.0.0'
+gem 'rails', '3.0.9'
+
+# gem 'rubytree', '0.5.2', :require => 'tree'
+gem 'rubytree', '0.7.0'
+# gem 'rack' , '~> 1.1.1'
+# gem 'i18n', '>= 0.4.2'
 gem 'coderay', '~> 0.9.7'
 
 gem "fastercsv", "~> 1.5.0", :platforms => [:mri_18, :jruby, :mingw_18]
+
+# gem 'ruby-prof', :git => 'http://github.com/wycats/ruby-prof.git'
+gem 'ruby-prof'
+# gem 'jquery-rails'
+# gem 'prototype-rails'
 
 group :development do
 end
@@ -18,6 +26,7 @@ group :production do
 end
 
 group :test do
+  gem 'test-unit'
   # gem 'shoulda', '~> 2.10.3'
   gem 'shoulda'
   gem 'mocha'
