@@ -56,8 +56,8 @@
 <% end -%>
 </div>
 
-<% other_formats_links do |f| %>
-  <%= f.link_to 'Atom', :url => {:controller => 'activities', :action => 'index', :id => nil, :user_id => @user, :key => User.current.rss_key} %>
+<%= other_formats_links do |f| %>
+  <% f.link_to 'Atom', :url => {:controller => 'activities', :action => 'index', :id => nil, :user_id => @user, :key => User.current.rss_key} %>
 <% end %>
 
 <% content_for :header_tags do %>
