@@ -29,6 +29,8 @@ class Document < ActiveRecord::Base
   validates_presence_of :project, :title, :category
   validates_length_of :title, :maximum => 60
 
+  after_initialize :update_category
+
   scope :visible, lambda {|*args| { :include => :project,
                                           :conditions => Project.allowed_to_condition(args.shift || User.current, :view_documents, *args) } }
 
@@ -36,7 +38,7 @@ class Document < ActiveRecord::Base
     !user.nil? && user.allowed_to?(:view_documents, project)
   end
 
-  def after_initialize
+  def update_category
     if new_record?
       self.category ||= DocumentCategory.default
     end
