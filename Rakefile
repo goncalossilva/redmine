@@ -4,7 +4,19 @@
 require File.expand_path('../config/application', __FILE__)
 
 require 'rake'
-require 'rake/testtask'
-require 'rake/rdoctask'
 
-Rails::Application.load_tasks
+# Rake Fix Code start
+# NOTE: change 'Anelis' to your app's module name (see config/application.rb)
+module ::Redmine
+  class Application
+    include Rake::DSL
+  end
+end
+
+module ::RakeFileUtils
+  extend Rake::FileUtilsExt
+end
+# Rake Fix Code end
+
+Redmine::Application.load_tasks
+
