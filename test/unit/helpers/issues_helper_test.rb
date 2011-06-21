@@ -21,7 +21,6 @@ class IssuesHelperTest < HelperTestCase
   include ApplicationHelper
   include IssuesHelper
 
-  include ActionController::Assertions::SelectorAssertions
   fixtures :attachments,
            :auth_sources,
            :boards,
