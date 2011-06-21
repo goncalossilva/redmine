@@ -20,8 +20,9 @@ require File.expand_path('../../../test_helper', __FILE__)
 class ProjectsHelperTest < ActionView::TestCase
   include ApplicationHelper
   include ProjectsHelper
-  
-  fixtures :all
+
+  # fixtures :all
+  fixtures :projects, :trackers, :issue_statuses, :issues, :enumerations, :users, :issue_categories
 
   def setup
     super
