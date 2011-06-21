@@ -90,8 +90,8 @@ module CollectiveIdea #:nodoc:
             end_eval
           end
           
-          named_scope :roots, :conditions => {parent_column_name => nil}, :order => quoted_left_column_name
-          named_scope :leaves, :conditions => "#{quoted_right_column_name} - #{quoted_left_column_name} = 1", :order => quoted_left_column_name
+          scope :roots, :conditions => {parent_column_name => nil}, :order => quoted_left_column_name
+          scope :leaves, :conditions => "#{quoted_right_column_name} - #{quoted_left_column_name} = 1", :order => quoted_left_column_name
           if self.respond_to?(:define_callbacks)
             define_callbacks("before_move", "after_move")              
           end
