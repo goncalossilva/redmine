@@ -105,7 +105,11 @@ class Role < ActiveRecord::Base
   def builtin?
     self.builtin != 0
   end
-  
+
+  def builtin_for_db_migrate(perms)
+    write_attribute(:builtin, perms)
+  end
+
   # Return true if the role is a project member role
   def member?
     !self.builtin?
