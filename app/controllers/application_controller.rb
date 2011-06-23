@@ -24,13 +24,14 @@ class ApplicationController < ActionController::Base
   include Redmine::I18n
 
   layout 'base'
-  exempt_from_layout 'builder', 'rsb'
+  # exempt_from_layout 'builder', 'rsb'
   
   protect_from_forgery
   def handle_unverified_request
     super
     cookies.delete(:autologin)
   end
+
   # Remove broken cookie after upgrade from 0.8.x (#4292)
   # See https://rails.lighthouseapp.com/projects/8994/tickets/3360
   # TODO: remove it when Rails is fixed
