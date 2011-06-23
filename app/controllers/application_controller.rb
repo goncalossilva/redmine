@@ -24,7 +24,7 @@ class ApplicationController < ActionController::Base
   include Redmine::I18n
 
   layout 'base'
-  exempt_from_layout 'builder', 'rsb'
+  # exempt_from_layout 'builder', 'rsb'
 
   protect_from_forgery
   def handle_unverified_request
