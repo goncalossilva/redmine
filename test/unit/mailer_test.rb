@@ -19,7 +19,6 @@ require File.expand_path('../../test_helper', __FILE__)
 
 class MailerTest < ActiveSupport::TestCase
   include Redmine::I18n
-  include ActionController::Assertions::SelectorAssertions
   fixtures :all
   
   def setup
