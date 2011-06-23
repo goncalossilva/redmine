@@ -40,7 +40,7 @@ class TimeEntry < ActiveRecord::Base
   validates_length_of :comments, :maximum => 255, :allow_nil => true
   after_initialize :update_activity
 
-  named_scope :visible, lambda {|*args| {
+  scope :visible, lambda {|*args| {
     :include => :project,
     :conditions => Project.allowed_to_condition(args.shift || User.current, :view_time_entries, *args)
   }}
