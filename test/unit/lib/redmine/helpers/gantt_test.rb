@@ -33,8 +33,6 @@ class Redmine::Helpers::GanttTest < ActiveSupport::TestCase
 
   end
 
-  include ActionController::Assertions::SelectorAssertions
-
   def setup
     @response = ActionController::TestResponse.new
     # Fixtures
