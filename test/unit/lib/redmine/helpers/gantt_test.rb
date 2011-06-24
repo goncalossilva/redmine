@@ -22,7 +22,7 @@ class Redmine::Helpers::GanttTest < ActiveSupport::TestCase
   class GanttViewTest < ActionView::Base
     include ActionView::Helpers::UrlHelper
     include ActionView::Helpers::TextHelper
-    include ActionController::UrlWriter
+    # include ActionController::UrlWriter
     include ApplicationHelper
     include ProjectsHelper
     include IssuesHelper
