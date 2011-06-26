@@ -132,7 +132,7 @@ class GroupsController < ApplicationController
   
   def autocomplete_for_user
     @group = Group.find(params[:id])
-    @users = User.active.like(params[:q]).find(:all, :limit => 100) - @group.users
+    @users = User.active.not_in_group(@group).like(params[:q]).all(:limit => 100)
     render :layout => false
   end
   
@@ -141,14 +141,22 @@ class GroupsController < ApplicationController
     @membership = Member.edit_membership(params[:membership_id], params[:membership], @group)
     @membership.save if request.post?
     respond_to do |format|
-       format.html { redirect_to :controller => 'groups', :action => 'edit', :id => @group, :tab => 'memberships' }
-       format.js { 
-         render(:update) {|page| 
-           page.replace_html "tab-content-memberships", :partial => 'groups/memberships'
-           page.visual_effect(:highlight, "member-#{@membership.id}")
-         }
-       }
-     end
+      if @membership.valid?
+        format.html { redirect_to :controller => 'groups', :action => 'edit', :id => @group, :tab => 'memberships' }
+        format.js {
+          render(:update) {|page|
+            page.replace_html "tab-content-memberships", :partial => 'groups/memberships'
+            page.visual_effect(:highlight, "member-#{@membership.id}")
+          }
+        }
+      else
+        format.js {
+          render(:update) {|page|
+            page.alert(l(:notice_failed_to_save_members, :errors => @membership.errors.full_messages.join(', ')))
+          }
+        }
+      end
+    end
   end
   
   def destroy_membership

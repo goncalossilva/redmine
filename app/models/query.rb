@@ -1,5 +1,5 @@
 # Redmine - project management software
-# Copyright (C) 2006-2008  Jean-Philippe Lang
+# Copyright (C) 2006-2011  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -42,6 +42,10 @@ class QueryColumn
   def value(issue)
     issue.send name
   end
+  
+  def css_classes
+    name
+  end
 end
 
 class QueryCustomFieldColumn < QueryColumn
@@ -67,6 +71,10 @@ class QueryCustomFieldColumn < QueryColumn
   def value(issue)
     cv = issue.custom_values.detect {|v| v.custom_field_id == @cf.id}
     cv && @cf.cast_value(cv.value)
+  end
+  
+  def css_classes
+    @css_classes ||= "#{name} #{@cf.field_format}"
   end
 end
 
@@ -187,14 +195,28 @@ class Query < ActiveRecord::Base
     if project
       user_values += project.users.sort.collect{|s| [s.name, s.id.to_s] }
     else
-      project_ids = User.current.projects.collect(&:id)
-      if project_ids.any?
-        # members of the user's projects
-        user_values += User.active.find(:all, :conditions => ["#{User.table_name}.id IN (SELECT DISTINCT user_id FROM members WHERE project_id IN (?))", project_ids]).sort.collect{|s| [s.name, s.id.to_s] }
+      all_projects = Project.visible.all
+      if all_projects.any?
+        # members of visible projects
+        user_values += User.active.find(:all, :conditions => ["#{User.table_name}.id IN (SELECT DISTINCT user_id FROM members WHERE project_id IN (?))", all_projects.collect(&:id)]).sort.collect{|s| [s.name, s.id.to_s] }
+          
+        # project filter
+        project_values = []
+        Project.project_tree(all_projects) do |p, level|
+          prefix = (level > 0 ? ('--' * level + ' ') : '')
+          project_values << ["#{prefix}#{p.name}", p.id.to_s]
+        end
+        @available_filters["project_id"] = { :type => :list, :order => 1, :values => project_values} unless project_values.empty?
       end
     end
     @available_filters["assigned_to_id"] = { :type => :list_optional, :order => 4, :values => user_values } unless user_values.empty?
     @available_filters["author_id"] = { :type => :list, :order => 5, :values => user_values } unless user_values.empty?
+
+    group_values = Group.all.collect {|g| [g.name, g.id.to_s] }
+    @available_filters["member_of_group"] = { :type => :list_optional, :order => 6, :values => group_values } unless group_values.empty?
+
+    role_values = Role.givable.collect {|r| [r.name, r.id.to_s] }
+    @available_filters["assigned_to_role"] = { :type => :list_optional, :order => 7, :values => role_values } unless role_values.empty?
     
     if User.current.logged?
       @available_filters["watcher_id"] = { :type => :list, :order => 15, :values => [["<< #{l(:label_me)} >>", "me"]] }
@@ -202,14 +224,19 @@ class Query < ActiveRecord::Base
   
     if project
       # project specific filters
-      unless @project.issue_categories.empty?
-        @available_filters["category_id"] = { :type => :list_optional, :order => 6, :values => @project.issue_categories.collect{|s| [s.name, s.id.to_s] } }
+      categories = @project.issue_categories.all
+      unless categories.empty?
+        @available_filters["category_id"] = { :type => :list_optional, :order => 6, :values => categories.collect{|s| [s.name, s.id.to_s] } }
       end
-      unless @project.shared_versions.empty?
-        @available_filters["fixed_version_id"] = { :type => :list_optional, :order => 7, :values => @project.shared_versions.sort.collect{|s| ["#{s.project.name} - #{s.name}", s.id.to_s] } }
+      versions = @project.shared_versions.all
+      unless versions.empty?
+        @available_filters["fixed_version_id"] = { :type => :list_optional, :order => 7, :values => versions.sort.collect{|s| ["#{s.project.name} - #{s.name}", s.id.to_s] } }
       end
-      unless @project.descendants.active.empty?
-        @available_filters["subproject_id"] = { :type => :list_subprojects, :order => 13, :values => @project.descendants.visible.collect{|s| [s.name, s.id.to_s] } }
+      unless @project.leaf?
+        subprojects = @project.descendants.visible.all
+        unless subprojects.empty?
+          @available_filters["subproject_id"] = { :type => :list_subprojects, :order => 13, :values => subprojects.collect{|s| [s.name, s.id.to_s] } }
+        end
       end
       add_custom_fields_filters(@project.all_issue_custom_fields)
     else
@@ -246,8 +273,10 @@ class Query < ActiveRecord::Base
 
   # Add multiple filters using +add_filter+
   def add_filters(fields, operators, values)
-    fields.each do |field|
-      add_filter(field, operators[field], values[field])
+    if fields.is_a?(Array) && operators.is_a?(Hash) && values.is_a?(Hash)
+      fields.each do |field|
+        add_filter(field, operators[field], values[field])
+      end
     end
   end
   
@@ -363,15 +392,15 @@ class Query < ActiveRecord::Base
   
   # Returns true if the query is a grouped query
   def grouped?
-    !group_by.blank?
+    !group_by_column.nil?
   end
   
   def group_by_column
-    groupable_columns.detect {|c| c.name.to_s == group_by}
+    groupable_columns.detect {|c| c.groupable && c.name.to_s == group_by}
   end
   
   def group_by_statement
-    group_by_column.groupable
+    group_by_column.try(:groupable)
   end
   
   def project_statement
@@ -396,8 +425,7 @@ class Query < ActiveRecord::Base
     elsif project
       project_clauses << "#{Project.table_name}.id = %d" % project.id
     end
-    project_clauses <<  Project.allowed_to_condition(User.current, :view_issues)
-    project_clauses.join(' AND ')
+    project_clauses.any? ? project_clauses.join(' AND ') : nil
   end
 
   def statement
@@ -427,6 +455,47 @@ class Query < ActiveRecord::Base
         db_field = 'user_id'
         sql << "#{Issue.table_name}.id #{ operator == '=' ? 'IN' : 'NOT IN' } (SELECT #{db_table}.watchable_id FROM #{db_table} WHERE #{db_table}.watchable_type='Issue' AND "
         sql << sql_for_field(field, '=', v, db_table, db_field) + ')'
+      elsif field == "member_of_group" # named field
+        if operator == '*' # Any group
+          groups = Group.all
+          operator = '=' # Override the operator since we want to find by assigned_to
+        elsif operator == "!*"
+          groups = Group.all
+          operator = '!' # Override the operator since we want to find by assigned_to
+        else
+          groups = Group.find_all_by_id(v)
+        end
+        groups ||= []
+
+        members_of_groups = groups.inject([]) {|user_ids, group|
+          if group && group.user_ids.present?
+            user_ids << group.user_ids
+          end
+          user_ids.flatten.uniq.compact
+        }.sort.collect(&:to_s)
+        
+        sql << '(' + sql_for_field("assigned_to_id", operator, members_of_groups, Issue.table_name, "assigned_to_id", false) + ')'
+
+      elsif field == "assigned_to_role" # named field
+        if operator == "*" # Any Role
+          roles = Role.givable
+          operator = '=' # Override the operator since we want to find by assigned_to
+        elsif operator == "!*" # No role
+          roles = Role.givable
+          operator = '!' # Override the operator since we want to find by assigned_to
+        else
+          roles = Role.givable.find_all_by_id(v)
+        end
+        roles ||= []
+        
+        members_of_roles = roles.inject([]) {|user_ids, role|
+          if role && role.members
+            user_ids << role.members.collect(&:user_id)
+          end
+          user_ids.flatten.uniq.compact
+        }.sort.collect(&:to_s)
+        
+        sql << '(' + sql_for_field("assigned_to_id", operator, members_of_roles, Issue.table_name, "assigned_to_id", false) + ')'
       else
         # regular field
         db_table = Issue.table_name
@@ -437,7 +506,10 @@ class Query < ActiveRecord::Base
       
     end if filters and valid?
     
-    (filters_clauses << project_statement).join(' AND ')
+    filters_clauses << project_statement
+    filters_clauses.reject!(&:blank?)
+    
+    filters_clauses.any? ? filters_clauses.join(' AND ') : nil
   end
   
   # Returns the issue count
@@ -453,7 +525,7 @@ class Query < ActiveRecord::Base
     if grouped?
       begin
         # Rails will raise an (unexpected) RecordNotFound if there's only a nil group value
-        r = Issue.count(:group => group_by_statement, :include => [:status, :project], :conditions => statement)
+        r = Issue.visible.count(:group => group_by_statement, :include => [:status, :project], :conditions => statement)
       rescue ActiveRecord::RecordNotFound
         r = {nil => issue_count}
       end
@@ -474,7 +546,7 @@ class Query < ActiveRecord::Base
     order_option = nil if order_option.blank?
     
     Issue.find :all, :include => ([:status, :project] + (options[:include] || [])).uniq,
-                     :conditions => merge_conditions(statement, options[:conditions]),
+                     :conditions => Query.merge_conditions(statement, options[:conditions]),
                      :order => order_option,
                      :limit  => options[:limit],
                      :offset => options[:offset]
@@ -485,7 +557,7 @@ class Query < ActiveRecord::Base
   # Returns the journals
   # Valid options are :order, :offset, :limit
   def journals(options={})
-    Journal.find :all, :include => [:details, :user, {:issue => [:project, :author, :tracker, :status]}],
+    Journal.visible.find :all, :include => [:details, :user, {:issue => [:project, :author, :tracker, :status]}],
                        :conditions => statement,
                        :order => options[:order],
                        :limit => options[:limit],
@@ -498,7 +570,7 @@ class Query < ActiveRecord::Base
   # Valid options are :conditions
   def versions(options={})
     Version.find :all, :include => :project,
-                       :conditions => merge_conditions(project_statement, options[:conditions])
+                       :conditions => Query.merge_conditions(project_statement, options[:conditions])
   rescue ::ActiveRecord::StatementInvalid => e
     raise StatementInvalid.new(e.message)
   end
@@ -510,9 +582,19 @@ class Query < ActiveRecord::Base
     sql = ''
     case operator
     when "="
-      sql = "#{db_table}.#{db_field} IN (" + value.collect{|val| "'#{connection.quote_string(val)}'"}.join(",") + ")"
+      if value.any?
+        sql = "#{db_table}.#{db_field} IN (" + value.collect{|val| "'#{connection.quote_string(val)}'"}.join(",") + ")"
+      else
+        # IN an empty set
+        sql = "1=0"
+      end
     when "!"
-      sql = "(#{db_table}.#{db_field} IS NULL OR #{db_table}.#{db_field} NOT IN (" + value.collect{|val| "'#{connection.quote_string(val)}'"}.join(",") + "))"
+      if value.any?
+        sql = "(#{db_table}.#{db_field} IS NULL OR #{db_table}.#{db_field} NOT IN (" + value.collect{|val| "'#{connection.quote_string(val)}'"}.join(",") + "))"
+      else
+        # NOT IN an empty set
+        sql = "1=1"
+      end
     when "!*"
       sql = "#{db_table}.#{db_field} IS NULL"
       sql << " OR #{db_table}.#{db_field} = ''" if is_custom_filter
@@ -542,12 +624,10 @@ class Query < ActiveRecord::Base
     when "t"
       sql = date_range_clause(db_table, db_field, 0, 0)
     when "w"
-      from = l(:general_first_day_of_week) == '7' ?
-      # week starts on sunday
-      ((Date.today.cwday == 7) ? Time.now.at_beginning_of_day : Time.now.at_beginning_of_week - 1.day) :
-        # week starts on monday (Rails default)
-        Time.now.at_beginning_of_week
-      sql = "#{db_table}.#{db_field} BETWEEN '%s' AND '%s'" % [connection.quoted_date(from), connection.quoted_date(from + 7.days)]
+      first_day_of_week = l(:general_first_day_of_week).to_i
+      day_of_week = Date.today.cwday
+      days_ago = (day_of_week >= first_day_of_week ? day_of_week - first_day_of_week : day_of_week + 7 - first_day_of_week)
+      sql = date_range_clause(db_table, db_field, - days_ago, - days_ago + 6)
     when "~"
       sql = "LOWER(#{db_table}.#{db_field}) LIKE '%#{connection.quote_string(value.first.to_s.downcase)}%'"
     when "!~"
@@ -570,6 +650,9 @@ class Query < ActiveRecord::Base
         options = { :type => :date, :order => 20 }
       when "bool"
         options = { :type => :list, :values => [[l(:general_text_yes), "1"], [l(:general_text_no), "0"]], :order => 20 }
+      when "user", "version"
+        next unless project
+        options = { :type => :list_optional, :values => field.possible_values_options(project), :order => 20}
       else
         options = { :type => :string, :order => 20 }
       end

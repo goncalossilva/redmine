@@ -1,8 +1,8 @@
-# This file is auto-generated from the current state of the database. Instead 
+# This file is auto-generated from the current state of the database. Instead
 # of editing this file, please use the migrations feature of Active Record to
 # incrementally modify your database, and then regenerate this schema definition.
 #
-# Note that this schema.rb definition is the authoritative source for your 
+# Note that this schema.rb definition is the authoritative source for your
 # database schema. If you need to create the application database on another
 # system, you should be using db:schema:load, not running all the migrations
 # from scratch. The latter is a flawed and unsustainable approach (the more migrations
@@ -10,7 +10,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20100313171051) do
+ActiveRecord::Schema.define(:version => 20110220160626) do
 
   create_table "attachments", :force => true do |t|
     t.integer  "container_id",                 :default => 0,  :null => false
@@ -62,10 +62,10 @@ ActiveRecord::Schema.define(:version => 20100313171051) do
   add_index "boards", ["project_id"], :name => "altered_boards_project_id"
 
   create_table "changes", :force => true do |t|
-    t.integer "changeset_id",                               :null => false
-    t.string  "action",        :limit => 1, :default => "", :null => false
-    t.string  "path",                       :default => "", :null => false
-    t.string  "from_path"
+    t.integer "changeset_id",                                 :null => false
+    t.string  "action",        :limit => 1,   :default => "", :null => false
+    t.text    "path",          :limit => 255,                 :null => false
+    t.text    "from_path",     :limit => 255
     t.string  "from_revision"
     t.string  "revision"
     t.string  "branch"
@@ -124,6 +124,7 @@ ActiveRecord::Schema.define(:version => 20100313171051) do
     t.boolean "searchable",                    :default => false
     t.text    "default_value"
     t.boolean "editable",                      :default => true
+    t.boolean "visible",                       :default => true,  :null => false
   end
 
   add_index "custom_fields", ["id", "type"], :name => "index_custom_fields_on_id_and_type"
@@ -297,6 +298,7 @@ ActiveRecord::Schema.define(:version => 20100313171051) do
   end
 
   add_index "members", ["project_id"], :name => "index_members_on_project_id"
+  add_index "members", ["user_id", "project_id"], :name => "index_members_on_user_id_and_project_id", :unique => true
   add_index "members", ["user_id"], :name => "index_members_on_user_id"
 
   create_table "messages", :force => true do |t|
@@ -349,14 +351,14 @@ ActiveRecord::Schema.define(:version => 20100313171051) do
   end
 
   create_table "projects", :force => true do |t|
-    t.string   "name",        :limit => 30,  :default => "",   :null => false
+    t.string   "name",                       :default => "",   :null => false
     t.text     "description", :limit => 255
     t.string   "homepage",                   :default => ""
     t.boolean  "is_public",                  :default => true, :null => false
     t.integer  "parent_id"
     t.datetime "created_on"
     t.datetime "updated_on"
-    t.string   "identifier",  :limit => 20
+    t.string   "identifier"
     t.integer  "status",                     :default => 1,    :null => false
     t.integer  "lft"
     t.integer  "rgt"
@@ -466,7 +468,6 @@ ActiveRecord::Schema.define(:version => 20100313171051) do
     t.string   "firstname",         :limit => 30, :default => "",    :null => false
     t.string   "lastname",          :limit => 30, :default => "",    :null => false
     t.string   "mail",              :limit => 60, :default => "",    :null => false
-    t.boolean  "mail_notification",               :default => true,  :null => false
     t.boolean  "admin",                           :default => false, :null => false
     t.integer  "status",                          :default => 1,     :null => false
     t.datetime "last_login_on"
@@ -476,6 +477,7 @@ ActiveRecord::Schema.define(:version => 20100313171051) do
     t.datetime "updated_on"
     t.string   "type"
     t.string   "identity_url"
+    t.string   "mail_notification",               :default => "",    :null => false
   end
 
   add_index "users", ["auth_source_id"], :name => "index_users_on_auth_source_id"
@@ -563,10 +565,12 @@ ActiveRecord::Schema.define(:version => 20100313171051) do
   add_index "wikis", ["project_id"], :name => "wikis_project_id"
 
   create_table "workflows", :force => true do |t|
-    t.integer "tracker_id",    :default => 0, :null => false
-    t.integer "old_status_id", :default => 0, :null => false
-    t.integer "new_status_id", :default => 0, :null => false
-    t.integer "role_id",       :default => 0, :null => false
+    t.integer "tracker_id",    :default => 0,     :null => false
+    t.integer "old_status_id", :default => 0,     :null => false
+    t.integer "new_status_id", :default => 0,     :null => false
+    t.integer "role_id",       :default => 0,     :null => false
+    t.boolean "assignee",      :default => false, :null => false
+    t.boolean "author",        :default => false, :null => false
   end
 
   add_index "workflows", ["new_status_id"], :name => "index_workflows_on_new_status_id"

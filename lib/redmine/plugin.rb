@@ -1,16 +1,16 @@
-# redMine - project management software
-# Copyright (C) 2006-2007  Jean-Philippe Lang
+# Redmine - project management software
+# Copyright (C) 2006-2011  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
 # as published by the Free Software Foundation; either version 2
 # of the License, or (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
@@ -88,6 +88,13 @@ module Redmine #:nodoc:
     # It doesn't unload installed plugins
     def self.clear
       @registered_plugins = {}
+    end
+
+    # Checks if a plugin is installed
+    #
+    # @param [String] id name of the plugin
+    def self.installed?(id)
+      registered_plugins[id.to_sym].present?
     end
     
     def initialize(id)
@@ -202,10 +209,10 @@ module Redmine #:nodoc:
     #   permission :say_hello, { :example => :say_hello }
     #   
     #   # A permission that can be given to registered users only
-    #   permission :say_hello, { :example => :say_hello }, :require => loggedin
+    #   permission :say_hello, { :example => :say_hello }, :require => :loggedin
     #   
     #   # A permission that can be given to project members only
-    #   permission :say_hello, { :example => :say_hello }, :require => member
+    #   permission :say_hello, { :example => :say_hello }, :require => :member
     def permission(name, actions, options = {})
       if @project_module
         Redmine::AccessControl.map {|map| map.project_module(@project_module) {|map|map.permission(name, actions, options)}}

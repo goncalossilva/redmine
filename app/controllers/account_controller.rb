@@ -83,9 +83,9 @@ class AccountController < ApplicationController
     else
       @user = User.new(params[:user])
       @user.admin = false
-      @user.status = User::STATUS_REGISTERED
+      @user.register
       if session[:auth_source_registration]
-        @user.status = User::STATUS_ACTIVE
+        @user.activate
         @user.login = session[:auth_source_registration][:login]
         @user.auth_source_id = session[:auth_source_registration][:auth_source_id]
         if @user.save
@@ -116,8 +116,8 @@ class AccountController < ApplicationController
     token = Token.find_by_action_and_value('register', params[:token])
     redirect_to(home_url) && return unless token and !token.expired?
     user = token.user
-    redirect_to(home_url) && return unless user.status == User::STATUS_REGISTERED
-    user.status = User::STATUS_ACTIVE
+    redirect_to(home_url) && return unless user.registered?
+    user.activate
     if user.save
       token.destroy
       flash[:notice] = l(:notice_account_activated)
@@ -170,7 +170,7 @@ class AccountController < ApplicationController
           user.mail = registration['email'] unless registration['email'].nil?
           user.firstname, user.lastname = registration['fullname'].split(' ') unless registration['fullname'].nil?
           user.random_password
-          user.status = User::STATUS_REGISTERED
+          user.register
 
           case Setting.self_registration
           when '1'
@@ -203,11 +203,23 @@ class AccountController < ApplicationController
     self.logged_user = user
     # generate a key and set cookie if autologin
     if params[:autologin] && Setting.autologin?
-      token = Token.create(:user => user, :action => 'autologin')
-      cookies[:autologin] = { :value => token.value, :expires => 1.year.from_now }
+      set_autologin_cookie(user)
     end
     call_hook(:controller_account_success_authentication_after, {:user => user })
     redirect_back_or_default :controller => 'my', :action => 'page'
+  end
+  
+  def set_autologin_cookie(user)
+    token = Token.create(:user => user, :action => 'autologin')
+    cookie_name = Redmine::Configuration['autologin_cookie_name'] || 'autologin'
+    cookie_options = {
+      :value => token.value,
+      :expires => 1.year.from_now,
+      :path => (Redmine::Configuration['autologin_cookie_path'] || '/'),
+      :secure => (Redmine::Configuration['autologin_cookie_secure'] ? true : false),
+      :httponly => true
+    }
+    cookies[cookie_name] = cookie_options
   end
 
   # Onthefly creation failed, display the registration form to fill/fix attributes
@@ -241,7 +253,7 @@ class AccountController < ApplicationController
   # Pass a block for behavior when a user fails to save
   def register_automatically(user, &block)
     # Automatic activation
-    user.status = User::STATUS_ACTIVE
+    user.activate
     user.last_login_on = Time.now
     if user.save
       self.logged_user = user
