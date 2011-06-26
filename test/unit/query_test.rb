@@ -1,5 +1,5 @@
-# redMine - project management software
-# Copyright (C) 2006-2008  Jean-Philippe Lang
+# Redmine - project management software
+# Copyright (C) 2006-2011  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -15,7 +15,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-require File.dirname(__FILE__) + '/../test_helper'
+require File.expand_path('../../test_helper', __FILE__)
 
 class QueryTest < ActiveSupport::TestCase
   fixtures :projects, :enabled_modules, :users, :members, :member_roles, :roles, :trackers, :issue_statuses, :issue_categories, :enumerations, :issues, :watchers, :custom_fields, :custom_values, :versions, :queries
@@ -33,10 +33,29 @@ class QueryTest < ActiveSupport::TestCase
     assert query.available_filters['fixed_version_id'][:values].detect {|v| v.last == '2'}
   end
   
+  def test_project_filter_in_global_queries
+    query = Query.new(:project => nil, :name => '_')
+    project_filter = query.available_filters["project_id"]
+    assert_not_nil project_filter
+    project_ids = project_filter[:values].map{|p| p[1]}
+    assert project_ids.include?("1")  #public project
+    assert !project_ids.include?("2") #private project user cannot see
+  end
+  
   def find_issues_with_query(query)
     Issue.find :all,
       :include => [ :assigned_to, :status, :tracker, :project, :priority ], 
       :conditions => query.statement
+  end
+
+  def assert_find_issues_with_query_is_successful(query)
+    assert_nothing_raised do
+      find_issues_with_query(query)
+    end
+  end
+
+  def assert_query_statement_includes(query, condition)
+    assert query.statement.include?(condition), "Query statement condition not found in: #{query.statement}"
   end
 
   def test_query_should_allow_shared_versions_for_a_project_query
@@ -172,6 +191,29 @@ class QueryTest < ActiveSupport::TestCase
     result.each {|issue| assert issue.subject.downcase.include?('unable') }
   end
   
+  def test_range_for_this_week_with_week_starting_on_monday
+    I18n.locale = :fr
+    assert_equal '1', I18n.t(:general_first_day_of_week)
+    
+    Date.stubs(:today).returns(Date.parse('2011-04-29'))
+    
+    query = Query.new(:project => Project.find(1), :name => '_')
+    query.add_filter('due_date', 'w', [''])
+    assert query.statement.match(/issues\.due_date > '2011-04-24 23:59:59(\.9+)?' AND issues\.due_date <= '2011-05-01 23:59:59(\.9+)?/), "range not found in #{query.statement}"
+    I18n.locale = :en
+  end
+  
+  def test_range_for_this_week_with_week_starting_on_sunday
+    I18n.locale = :en
+    assert_equal '7', I18n.t(:general_first_day_of_week)
+    
+    Date.stubs(:today).returns(Date.parse('2011-04-29'))
+    
+    query = Query.new(:project => Project.find(1), :name => '_')
+    query.add_filter('due_date', 'w', [''])
+    assert query.statement.match(/issues\.due_date > '2011-04-23 23:59:59(\.9+)?' AND issues\.due_date <= '2011-04-30 23:59:59(\.9+)?/), "range not found in #{query.statement}"
+  end
+  
   def test_operator_does_not_contains
     query = Query.new(:project => Project.find(1), :name => '_')
     query.add_filter('subject', '!~', ['uNable'])
@@ -199,6 +241,14 @@ class QueryTest < ActiveSupport::TestCase
     User.current = nil
   end
   
+  def test_statement_should_be_nil_with_no_filters
+    q = Query.new(:name => '_')
+    q.filters = {}
+    
+    assert q.valid?
+    assert_nil q.statement
+  end
+  
   def test_default_columns
     q = Query.new
     assert !q.columns.empty? 
@@ -215,6 +265,22 @@ class QueryTest < ActiveSupport::TestCase
   def test_groupable_columns_should_include_custom_fields
     q = Query.new
     assert q.groupable_columns.detect {|c| c.is_a? QueryCustomFieldColumn}
+  end
+
+  def test_grouped_with_valid_column
+    q = Query.new(:group_by => 'status')
+    assert q.grouped?
+    assert_not_nil q.group_by_column
+    assert_equal :status, q.group_by_column.name
+    assert_not_nil q.group_by_statement
+    assert_equal 'status', q.group_by_statement
+  end
+  
+  def test_grouped_with_invalid_column
+    q = Query.new(:group_by => 'foo')
+    assert !q.grouped?
+    assert_nil q.group_by_column
+    assert_nil q.group_by_statement
   end
   
   def test_default_sort
@@ -351,4 +417,191 @@ class QueryTest < ActiveSupport::TestCase
     assert !q.editable_by?(manager)
     assert !q.editable_by?(developer)
   end
+
+  context "#available_filters" do
+    setup do
+      @query = Query.new(:name => "_")
+    end
+    
+    should "include users of visible projects in cross-project view" do
+      users = @query.available_filters["assigned_to_id"]
+      assert_not_nil users
+      assert users[:values].map{|u|u[1]}.include?("3")
+    end
+
+    should "include visible projects in cross-project view" do
+      projects = @query.available_filters["project_id"]
+      assert_not_nil projects
+      assert projects[:values].map{|u|u[1]}.include?("1")
+    end
+
+    context "'member_of_group' filter" do
+      should "be present" do
+        assert @query.available_filters.keys.include?("member_of_group")
+      end
+      
+      should "be an optional list" do
+        assert_equal :list_optional, @query.available_filters["member_of_group"][:type]
+      end
+      
+      should "have a list of the groups as values" do
+        Group.destroy_all # No fixtures
+        group1 = Group.generate!.reload
+        group2 = Group.generate!.reload
+
+        expected_group_list = [
+                               [group1.name, group1.id.to_s],
+                               [group2.name, group2.id.to_s]
+                              ]
+        assert_equal expected_group_list.sort, @query.available_filters["member_of_group"][:values].sort
+      end
+
+    end
+
+    context "'assigned_to_role' filter" do
+      should "be present" do
+        assert @query.available_filters.keys.include?("assigned_to_role")
+      end
+      
+      should "be an optional list" do
+        assert_equal :list_optional, @query.available_filters["assigned_to_role"][:type]
+      end
+      
+      should "have a list of the Roles as values" do
+        assert @query.available_filters["assigned_to_role"][:values].include?(['Manager','1'])
+        assert @query.available_filters["assigned_to_role"][:values].include?(['Developer','2'])
+        assert @query.available_filters["assigned_to_role"][:values].include?(['Reporter','3'])
+      end
+
+      should "not include the built in Roles as values" do
+        assert ! @query.available_filters["assigned_to_role"][:values].include?(['Non member','4'])
+        assert ! @query.available_filters["assigned_to_role"][:values].include?(['Anonymous','5'])
+      end
+
+    end
+
+  end
+
+  context "#statement" do
+    context "with 'member_of_group' filter" do
+      setup do
+        Group.destroy_all # No fixtures
+        @user_in_group = User.generate!
+        @second_user_in_group = User.generate!
+        @user_in_group2 = User.generate!
+        @user_not_in_group = User.generate!
+        
+        @group = Group.generate!.reload
+        @group.users << @user_in_group
+        @group.users << @second_user_in_group
+        
+        @group2 = Group.generate!.reload
+        @group2.users << @user_in_group2
+        
+      end
+      
+      should "search assigned to for users in the group" do
+        @query = Query.new(:name => '_')
+        @query.add_filter('member_of_group', '=', [@group.id.to_s])
+
+        assert_query_statement_includes @query, "#{Issue.table_name}.assigned_to_id IN ('#{@user_in_group.id}','#{@second_user_in_group.id}')"
+        assert_find_issues_with_query_is_successful @query
+      end
+
+      should "search not assigned to any group member (none)" do
+        @query = Query.new(:name => '_')
+        @query.add_filter('member_of_group', '!*', [''])
+
+        # Users not in a group
+        assert_query_statement_includes @query, "#{Issue.table_name}.assigned_to_id IS NULL OR #{Issue.table_name}.assigned_to_id NOT IN ('#{@user_in_group.id}','#{@second_user_in_group.id}','#{@user_in_group2.id}')"
+        assert_find_issues_with_query_is_successful @query
+      end
+
+      should "search assigned to any group member (all)" do
+        @query = Query.new(:name => '_')
+        @query.add_filter('member_of_group', '*', [''])
+
+        # Only users in a group
+        assert_query_statement_includes @query, "#{Issue.table_name}.assigned_to_id IN ('#{@user_in_group.id}','#{@second_user_in_group.id}','#{@user_in_group2.id}')"
+        assert_find_issues_with_query_is_successful @query
+      end
+      
+      should "return an empty set with = empty group" do
+        @empty_group = Group.generate!
+        @query = Query.new(:name => '_')
+        @query.add_filter('member_of_group', '=', [@empty_group.id.to_s])
+        
+        assert_equal [], find_issues_with_query(@query)
+      end
+      
+      should "return issues with ! empty group" do
+        @empty_group = Group.generate!
+        @query = Query.new(:name => '_')
+        @query.add_filter('member_of_group', '!', [@empty_group.id.to_s])
+        
+        assert_find_issues_with_query_is_successful @query
+      end
+    end
+
+    context "with 'assigned_to_role' filter" do
+      setup do
+        # No fixtures
+        MemberRole.delete_all
+        Member.delete_all
+        Role.delete_all
+        
+        @manager_role = Role.generate!(:name => 'Manager')
+        @developer_role = Role.generate!(:name => 'Developer')
+
+        @project = Project.generate!
+        @manager = User.generate!
+        @developer = User.generate!
+        @boss = User.generate!
+        User.add_to_project(@manager, @project, @manager_role)
+        User.add_to_project(@developer, @project, @developer_role)
+        User.add_to_project(@boss, @project, [@manager_role, @developer_role])
+      end
+      
+      should "search assigned to for users with the Role" do
+        @query = Query.new(:name => '_')
+        @query.add_filter('assigned_to_role', '=', [@manager_role.id.to_s])
+
+        assert_query_statement_includes @query, "#{Issue.table_name}.assigned_to_id IN ('#{@manager.id}','#{@boss.id}')"
+        assert_find_issues_with_query_is_successful @query
+      end
+
+      should "search assigned to for users not assigned to any Role (none)" do
+        @query = Query.new(:name => '_')
+        @query.add_filter('assigned_to_role', '!*', [''])
+
+        assert_query_statement_includes @query, "#{Issue.table_name}.assigned_to_id IS NULL OR #{Issue.table_name}.assigned_to_id NOT IN ('#{@manager.id}','#{@developer.id}','#{@boss.id}')"
+        assert_find_issues_with_query_is_successful @query
+      end
+
+      should "search assigned to for users assigned to any Role (all)" do
+        @query = Query.new(:name => '_')
+        @query.add_filter('assigned_to_role', '*', [''])
+
+        assert_query_statement_includes @query, "#{Issue.table_name}.assigned_to_id IN ('#{@manager.id}','#{@developer.id}','#{@boss.id}')"
+        assert_find_issues_with_query_is_successful @query
+      end
+      
+      should "return an empty set with empty role" do
+        @empty_role = Role.generate!
+        @query = Query.new(:name => '_')
+        @query.add_filter('assigned_to_role', '=', [@empty_role.id.to_s])
+        
+        assert_equal [], find_issues_with_query(@query)
+      end
+      
+      should "return issues with ! empty role" do
+        @empty_role = Role.generate!
+        @query = Query.new(:name => '_')
+        @query.add_filter('member_of_group', '!', [@empty_role.id.to_s])
+        
+        assert_find_issues_with_query_is_successful @query
+      end
+    end
+  end
+  
 end

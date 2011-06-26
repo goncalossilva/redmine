@@ -1,5 +1,5 @@
-# redMine - project management software
-# Copyright (C) 2006-2007  Jean-Philippe Lang
+# Redmine - project management software
+# Copyright (C) 2006-2011  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -15,10 +15,50 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-require File.dirname(__FILE__) + '/../test_helper'
+require File.expand_path('../../test_helper', __FILE__)
 
 class ProjectTest < ActiveSupport::TestCase
-  fixtures :all
+  fixtures :attachments,
+           :auth_sources,
+           :boards,
+           :changes,
+           :changesets,
+           :comments,
+           :custom_fields,
+           :custom_fields_projects,
+           :custom_fields_trackers,
+           :custom_values,
+           :documents,
+           :enabled_modules,
+           :enumerations,
+           :groups_users,
+           :issue_categories,
+           :issue_relations,
+           :issue_statuses,
+           :issues,
+           :journal_details,
+           :journals,
+           :member_roles,
+           :members,
+           :messages,
+           :news,
+           :projects,
+           :projects_trackers,
+           :queries,
+           :repositories,
+           :roles,
+           :time_entries,
+           :tokens,
+           :trackers,
+           :user_preferences,
+           :users,
+           :versions,
+           :watchers,
+           :wiki_content_versions,
+           :wiki_contents,
+           :wiki_pages,
+           :wikis,
+           :workflows
 
   def setup
     @ecookbook = Project.find(1)
@@ -29,7 +69,6 @@ class ProjectTest < ActiveSupport::TestCase
   should_validate_presence_of :name
   should_validate_presence_of :identifier
 
-  should_validate_uniqueness_of :name
   should_validate_uniqueness_of :identifier
 
   context "associations" do
@@ -59,6 +98,35 @@ class ProjectTest < ActiveSupport::TestCase
   def test_truth
     assert_kind_of Project, @ecookbook
     assert_equal "eCookbook", @ecookbook.name
+  end
+  
+  def test_default_attributes
+    with_settings :default_projects_public => '1' do
+      assert_equal true, Project.new.is_public
+      assert_equal false, Project.new(:is_public => false).is_public
+    end
+
+    with_settings :default_projects_public => '0' do
+      assert_equal false, Project.new.is_public
+      assert_equal true, Project.new(:is_public => true).is_public
+    end
+
+    with_settings :sequential_project_identifiers => '1' do
+      assert !Project.new.identifier.blank?
+      assert Project.new(:identifier => '').identifier.blank?
+    end
+
+    with_settings :sequential_project_identifiers => '0' do
+      assert Project.new.identifier.blank?
+      assert !Project.new(:identifier => 'test').blank?
+    end
+
+    with_settings :default_projects_modules => ['issue_tracking', 'repository'] do
+      assert_equal ['issue_tracking', 'repository'], Project.new.enabled_module_names
+    end
+    
+    assert_equal Tracker.all, Project.new.trackers
+    assert_equal Tracker.find(1, 3), Project.new(:tracker_ids => [1, 3]).trackers
   end
   
   def test_update
@@ -102,6 +170,7 @@ class ProjectTest < ActiveSupport::TestCase
     @ecookbook.reload
     
     assert !@ecookbook.active?
+    assert @ecookbook.archived?
     assert !user.projects.include?(@ecookbook)
     # Subproject are also archived
     assert !@ecookbook.children.empty?
@@ -129,6 +198,7 @@ class ProjectTest < ActiveSupport::TestCase
     assert @ecookbook.unarchive
     @ecookbook.reload
     assert @ecookbook.active?
+    assert !@ecookbook.archived?
     assert user.projects.include?(@ecookbook)
     # Subproject can now be unarchived
     @ecookbook_sub1.reload
@@ -150,6 +220,41 @@ class ProjectTest < ActiveSupport::TestCase
     assert_nil Member.first(:conditions => {:project_id => @ecookbook.id})
     assert_nil Board.first(:conditions => {:project_id => @ecookbook.id})
     assert_nil Issue.first(:conditions => {:project_id => @ecookbook.id})
+  end
+  
+  def test_destroying_root_projects_should_clear_data
+    Project.roots.each do |root|
+      root.destroy
+    end
+    
+    assert_equal 0, Project.count, "Projects were not deleted: #{Project.all.inspect}"
+    assert_equal 0, Member.count, "Members were not deleted: #{Member.all.inspect}"
+    assert_equal 0, MemberRole.count
+    assert_equal 0, Issue.count
+    assert_equal 0, Journal.count
+    assert_equal 0, JournalDetail.count
+    assert_equal 0, Attachment.count
+    assert_equal 0, EnabledModule.count
+    assert_equal 0, IssueCategory.count
+    assert_equal 0, IssueRelation.count
+    assert_equal 0, Board.count
+    assert_equal 0, Message.count
+    assert_equal 0, News.count
+    assert_equal 0, Query.count(:conditions => "project_id IS NOT NULL")
+    assert_equal 0, Repository.count
+    assert_equal 0, Changeset.count
+    assert_equal 0, Change.count
+    assert_equal 0, Comment.count
+    assert_equal 0, TimeEntry.count
+    assert_equal 0, Version.count
+    assert_equal 0, Watcher.count
+    assert_equal 0, Wiki.count
+    assert_equal 0, WikiPage.count
+    assert_equal 0, WikiContent.count
+    assert_equal 0, WikiContent::Version.count
+    assert_equal 0, Project.connection.select_all("SELECT * FROM projects_trackers").size
+    assert_equal 0, Project.connection.select_all("SELECT * FROM custom_fields_projects").size
+    assert_equal 0, CustomValue.count(:conditions => {:customized_type => ['Project', 'Issue', 'TimeEntry', 'Version']})
   end
   
   def test_move_an_orphan_project_to_a_root_project
@@ -523,6 +628,62 @@ class ProjectTest < ActiveSupport::TestCase
     assert_nil Project.next_identifier
   end
   
+  def test_enabled_module_names
+    with_settings :default_projects_modules => ['issue_tracking', 'repository'] do
+      project = Project.new
+      
+      project.enabled_module_names = %w(issue_tracking news)
+      assert_equal %w(issue_tracking news), project.enabled_module_names.sort
+    end
+  end
+
+  context "enabled_modules" do
+    setup do
+      @project = Project.find(1)
+    end
+
+    should "define module by names and preserve ids" do
+      # Remove one module
+      modules = @project.enabled_modules.slice(0..-2)
+      assert modules.any?
+      assert_difference 'EnabledModule.count', -1 do
+        @project.enabled_module_names = modules.collect(&:name)
+      end
+      @project.reload
+      # Ids should be preserved
+      assert_equal @project.enabled_module_ids.sort, modules.collect(&:id).sort
+    end
+
+    should "enable a module" do
+      @project.enabled_module_names = []
+      @project.reload
+      assert_equal [], @project.enabled_module_names
+      #with string
+      @project.enable_module!("issue_tracking")
+      assert_equal ["issue_tracking"], @project.enabled_module_names
+      #with symbol
+      @project.enable_module!(:gantt)
+      assert_equal ["issue_tracking", "gantt"], @project.enabled_module_names
+      #don't add a module twice
+      @project.enable_module!("issue_tracking")
+      assert_equal ["issue_tracking", "gantt"], @project.enabled_module_names
+    end
+
+    should "disable a module" do
+      #with string
+      assert @project.enabled_module_names.include?("issue_tracking")
+      @project.disable_module!("issue_tracking")
+      assert ! @project.reload.enabled_module_names.include?("issue_tracking")
+      #with symbol
+      assert @project.enabled_module_names.include?("gantt")
+      @project.disable_module!(:gantt)
+      assert ! @project.reload.enabled_module_names.include?("gantt")
+      #with EnabledModule object
+      first_module = @project.enabled_modules.first
+      @project.disable_module!(first_module)
+      assert ! @project.reload.enabled_module_names.include?(first_module.name)
+    end
+  end
 
   def test_enabled_module_names_should_not_recreate_enabled_modules
     project = Project.find(1)
@@ -740,6 +901,22 @@ class ProjectTest < ActiveSupport::TestCase
         assert_equal @project, membership.project
       end
     end
+    
+    should "copy memberships with groups and additional roles" do
+      group = Group.create!(:lastname => "Copy group")
+      user = User.find(7) 
+      group.users << user
+      # group role
+      Member.create!(:project_id => @source_project.id, :principal => group, :role_ids => [2])
+      member = Member.find_by_user_id_and_project_id(user.id, @source_project.id)
+      # additional role
+      member.role_ids = [1]
+
+      assert @project.copy(@source_project)
+      member = Member.find_by_user_id_and_project_id(user.id, @project.id)
+      assert_not_nil member
+      assert_equal [1, 2], member.role_ids.sort
+    end
 
     should "copy project specific queries" do
       assert @project.valid?
@@ -842,4 +1019,160 @@ class ProjectTest < ActiveSupport::TestCase
     
   end
 
+  context "#start_date" do
+    setup do
+      ProjectCustomField.destroy_all # Custom values are a mess to isolate in tests
+      @project = Project.generate!(:identifier => 'test0')
+      @project.trackers << Tracker.generate!
+    end
+    
+    should "be nil if there are no issues on the project" do
+      assert_nil @project.start_date
+    end
+    
+    should "be tested when issues have no start date"
+
+    should "be the earliest start date of it's issues" do
+      early = 7.days.ago.to_date
+      Issue.generate_for_project!(@project, :start_date => Date.today)
+      Issue.generate_for_project!(@project, :start_date => early)
+
+      assert_equal early, @project.start_date
+    end
+
+  end
+
+  context "#due_date" do
+    setup do
+      ProjectCustomField.destroy_all # Custom values are a mess to isolate in tests
+      @project = Project.generate!(:identifier => 'test0')
+      @project.trackers << Tracker.generate!
+    end
+    
+    should "be nil if there are no issues on the project" do
+      assert_nil @project.due_date
+    end
+    
+    should "be tested when issues have no due date"
+
+    should "be the latest due date of it's issues" do
+      future = 7.days.from_now.to_date
+      Issue.generate_for_project!(@project, :due_date => future)
+      Issue.generate_for_project!(@project, :due_date => Date.today)
+
+      assert_equal future, @project.due_date
+    end
+
+    should "be the latest due date of it's versions" do
+      future = 7.days.from_now.to_date
+      @project.versions << Version.generate!(:effective_date => future)
+      @project.versions << Version.generate!(:effective_date => Date.today)
+      
+
+      assert_equal future, @project.due_date
+
+    end
+
+    should "pick the latest date from it's issues and versions" do
+      future = 7.days.from_now.to_date
+      far_future = 14.days.from_now.to_date
+      Issue.generate_for_project!(@project, :due_date => far_future)
+      @project.versions << Version.generate!(:effective_date => future)
+      
+      assert_equal far_future, @project.due_date
+    end
+
+  end
+
+  context "Project#completed_percent" do
+    setup do
+      ProjectCustomField.destroy_all # Custom values are a mess to isolate in tests
+      @project = Project.generate!(:identifier => 'test0')
+      @project.trackers << Tracker.generate!
+    end
+
+    context "no versions" do
+      should "be 100" do
+        assert_equal 100, @project.completed_percent
+      end
+    end
+
+    context "with versions" do
+      should "return 0 if the versions have no issues" do
+        Version.generate!(:project => @project)
+        Version.generate!(:project => @project)
+
+        assert_equal 0, @project.completed_percent
+      end
+
+      should "return 100 if the version has only closed issues" do
+        v1 = Version.generate!(:project => @project)
+        Issue.generate_for_project!(@project, :status => IssueStatus.find_by_name('Closed'), :fixed_version => v1)
+        v2 = Version.generate!(:project => @project)
+        Issue.generate_for_project!(@project, :status => IssueStatus.find_by_name('Closed'), :fixed_version => v2)
+
+        assert_equal 100, @project.completed_percent
+      end
+
+      should "return the averaged completed percent of the versions (not weighted)" do
+        v1 = Version.generate!(:project => @project)
+        Issue.generate_for_project!(@project, :status => IssueStatus.find_by_name('New'), :estimated_hours => 10, :done_ratio => 50, :fixed_version => v1)
+        v2 = Version.generate!(:project => @project)
+        Issue.generate_for_project!(@project, :status => IssueStatus.find_by_name('New'), :estimated_hours => 10, :done_ratio => 50, :fixed_version => v2)
+
+        assert_equal 50, @project.completed_percent
+      end
+
+    end
+  end
+
+  context "#notified_users" do
+    setup do
+      @project = Project.generate!
+      @role = Role.generate!
+      
+      @user_with_membership_notification = User.generate!(:mail_notification => 'selected')
+      Member.generate!(:project => @project, :roles => [@role], :principal => @user_with_membership_notification, :mail_notification => true)
+
+      @all_events_user = User.generate!(:mail_notification => 'all')
+      Member.generate!(:project => @project, :roles => [@role], :principal => @all_events_user)
+
+      @no_events_user = User.generate!(:mail_notification => 'none')
+      Member.generate!(:project => @project, :roles => [@role], :principal => @no_events_user)
+
+      @only_my_events_user = User.generate!(:mail_notification => 'only_my_events')
+      Member.generate!(:project => @project, :roles => [@role], :principal => @only_my_events_user)
+
+      @only_assigned_user = User.generate!(:mail_notification => 'only_assigned')
+      Member.generate!(:project => @project, :roles => [@role], :principal => @only_assigned_user)
+
+      @only_owned_user = User.generate!(:mail_notification => 'only_owner')
+      Member.generate!(:project => @project, :roles => [@role], :principal => @only_owned_user)
+    end
+    
+    should "include members with a mail notification" do
+      assert @project.notified_users.include?(@user_with_membership_notification)
+    end
+    
+    should "include users with the 'all' notification option" do
+      assert @project.notified_users.include?(@all_events_user)
+    end
+    
+    should "not include users with the 'none' notification option" do
+      assert !@project.notified_users.include?(@no_events_user)
+    end
+    
+    should "not include users with the 'only_my_events' notification option" do
+      assert !@project.notified_users.include?(@only_my_events_user)
+    end
+    
+    should "not include users with the 'only_assigned' notification option" do
+      assert !@project.notified_users.include?(@only_assigned_user)
+    end
+    
+    should "not include users with the 'only_owner' notification option" do
+      assert !@project.notified_users.include?(@only_owned_user)
+    end
+  end
+  
 end

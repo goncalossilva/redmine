@@ -11,3 +11,4 @@ Currently not working:
 - The error_messages_for call doesn't work, there seems to be an issue with dynamic_form;
 - Mail notifications. The message is built, but calling deliver raises exceptions so it's disabled (Mailer needs to be rewritten);
 - Custom fields validations is not working properly (Query needs to be rewritten);
+

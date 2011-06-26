@@ -1,9 +1,14 @@
 <div class="contextual">
 <%= link_to_if_authorized l(:button_edit), {:controller => 'versions', :action => 'edit', :id => @version}, :class => 'icon icon-edit' %>
+<%= link_to_if_authorized(l(:button_edit_associated_wikipage, :page_title => @version.wiki_page_title), {:controller => 'wiki', :action => 'edit', :project_id => @version.project, :id => Wiki.titleize(@version.wiki_page_title)}, :class => 'icon icon-edit') unless @version.wiki_page_title.blank? || @version.project.wiki.nil? %>
 <%= call_hook(:view_versions_show_contextual, { :version => @version, :project => @project }) %>
 </div>
 
 <h2><%= h(@version.name) %></h2>
+
+<div id="roadmap">
+<%= render :partial => 'versions/overview', :locals => {:version => @version} %>
+<%= render(:partial => "wiki/content", :locals => {:content => @version.wiki_page.content}) if @version.wiki_page %>
 
 <div id="version-summary">
 <% if @version.estimated_hours > 0 || User.current.allowed_to?(:view_time_entries, @project) %>
@@ -28,21 +33,19 @@
 </div>
 </div>
 
-<div id="roadmap">
-<%= render :partial => 'versions/overview', :locals => {:version => @version} %>
-<%= render(:partial => "wiki/content", :locals => {:content => @version.wiki_page.content}) if @version.wiki_page %>
-
-<% issues = @version.fixed_issues.find(:all,
-                                       :include => [:status, :tracker, :priority],
-                                       :order => "#{Tracker.table_name}.position, #{Issue.table_name}.id") %>
-<% if issues.size > 0 %>
-<fieldset class="related-issues"><legend><%= l(:label_related_issues) %></legend>
-<ul>
-<% issues.each do |issue| -%>
-    <li><%= link_to_issue(issue) %></li>
-<% end -%>
-</ul>
-</fieldset>
+<% if @issues.present? %>
+<% form_tag({}) do -%>
+  <table class="list related-issues">
+  <caption><%= l(:label_related_issues) %></caption>
+  <%- @issues.each do |issue| -%>
+    <tr class="hascontextmenu">
+      <td class="checkbox"><%= check_box_tag 'ids[]', issue.id %></td>
+      <td><%= link_to_issue(issue, :project => (@project != issue.project)) %></td>
+    </tr>
+  <% end %>
+  </table>
+<% end %>
+<%= context_menu issues_context_menu_path %>
 <% end %>
 </div>
 

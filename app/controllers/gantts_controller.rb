@@ -1,8 +1,27 @@
+# Redmine - project management software
+# Copyright (C) 2006-2011  Jean-Philippe Lang
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
 class GanttsController < ApplicationController
+  menu_item :gantt
   before_filter :find_optional_project
 
   rescue_from Query::StatementInvalid, :with => :query_statement_invalid
 
+  helper :gantt
   helper :issues
   helper :projects
   helper :queries
@@ -13,33 +32,17 @@ class GanttsController < ApplicationController
   
   def show
     @gantt = Redmine::Helpers::Gantt.new(params)
+    @gantt.project = @project
     retrieve_query
     @query.group_by = nil
-    if @query.valid?
-      events = []
-      # Issues that have start and due dates
-      events += @query.issues(:include => [:tracker, :assigned_to, :priority],
-                              :order => "start_date, due_date",
-                              :conditions => ["(((start_date>=? and start_date<=?) or (due_date>=? and due_date<=?) or (start_date<? and due_date>?)) and start_date is not null and due_date is not null)", @gantt.date_from, @gantt.date_to, @gantt.date_from, @gantt.date_to, @gantt.date_from, @gantt.date_to]
-                              )
-      # Issues that don't have a due date but that are assigned to a version with a date
-      events += @query.issues(:include => [:tracker, :assigned_to, :priority, :fixed_version],
-                              :order => "start_date, effective_date",
-                              :conditions => ["(((start_date>=? and start_date<=?) or (effective_date>=? and effective_date<=?) or (start_date<? and effective_date>?)) and start_date is not null and due_date is null and effective_date is not null)", @gantt.date_from, @gantt.date_to, @gantt.date_from, @gantt.date_to, @gantt.date_from, @gantt.date_to]
-                              )
-      # Versions
-      events += @query.versions(:conditions => ["effective_date BETWEEN ? AND ?", @gantt.date_from, @gantt.date_to])
-                                   
-      @gantt.events = events
-    end
+    @gantt.query = @query if @query.valid?
     
     basename = (@project ? "#{@project.identifier}-" : '') + 'gantt'
     
     respond_to do |format|
       format.html { render :action => "show", :layout => !request.xhr? }
       format.png  { send_data(@gantt.to_image, :disposition => 'inline', :type => 'image/png', :filename => "#{basename}.png") } if @gantt.respond_to?('to_image')
-      format.pdf  { send_data(gantt_to_pdf(@gantt, @project), :type => 'application/pdf', :filename => "#{basename}.pdf") }
+      format.pdf  { send_data(@gantt.to_pdf, :type => 'application/pdf', :filename => "#{basename}.pdf") }
     end
   end
-
 end

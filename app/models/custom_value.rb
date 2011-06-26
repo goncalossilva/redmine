@@ -31,6 +31,10 @@ class CustomValue < ActiveRecord::Base
     custom_field.editable?
   end
   
+  def visible?
+    custom_field.visible?
+  end
+  
   def required?
     custom_field.is_required?
   end

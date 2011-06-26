@@ -1,22 +1,16 @@
-<h2><%= l(:label_calendar) %></h2>
+<h2><%= @query.new_record? ? l(:label_calendar) : h(@query.name) %></h2>
 
-<% form_tag({}, :id => 'query_form') do %>
-<fieldset id="filters" class="collapsible">
+<% form_tag({:controller => 'calendars', :action => 'show', :project_id => @project}, :method => :get, :id => 'query_form') do %>
+<%= hidden_field_tag 'set_filter', '1' %>
+<fieldset id="filters" class="collapsible <%= @query.new_record? ? "" : "collapsed" %>">
   <legend onclick="toggleFieldset(this);"><%= l(:label_filter_plural) %></legend>
-  <div>
+  <div style="<%= @query.new_record? ? "" : "display: none;" %>">
     <%= render :partial => 'queries/filters', :locals => {:query => @query} %>
   </div>
 </fieldset>
 
 <p style="float:right;">
-<%= link_to_remote ('« ' + (@month==1 ? "#{month_name(12)} #{@year-1}" : "#{month_name(@month-1)}")), 
-                        {:update => "content", :url => { :year => (@month==1 ? @year-1 : @year), :month =>(@month==1 ? 12 : @month-1) }},
-                        {:href => url_for(:action => 'show', :year => (@month==1 ? @year-1 : @year), :month =>(@month==1 ? 12 : @month-1))}
-                        %> |
-<%= link_to_remote ((@month==12 ? "#{month_name(1)} #{@year+1}" : "#{month_name(@month+1)}") + ' »'), 
-                        {:update => "content", :url => { :year => (@month==12 ? @year+1 : @year), :month =>(@month==12 ? 1 : @month+1) }},
-                        {:href => url_for(:action => 'show', :year => (@month==12 ? @year+1 : @year), :month =>(@month==12 ? 1 : @month+1))}
-                        %>
+  <%= link_to_previous_month(@year, @month) %> | <%= link_to_next_month(@year, @month) %>
 </p>
 
 <p class="buttons">
@@ -25,16 +19,8 @@
 <%= label_tag('year', l(:label_year)) %>
 <%= select_year(@year, :prefix => "year", :discard_type => true) %>
 
-<%= link_to_remote l(:button_apply),
-                   { :url => { :set_filter => (@query.new_record? ? 1 : nil) },
-                     :update => "content",
-                     :with => "Form.serialize('query_form')"
-                   }, :class => 'icon icon-checked' %>
-                   
-<%= link_to_remote l(:button_clear),
-                   { :url => { :set_filter => (@query.new_record? ? 1 : nil) }, 
-                     :update => "content",
-                   }, :class => 'icon icon-reload' if @query.new_record? %>
+<%= link_to_function l(:button_apply), '$("query_form").submit()', :class => 'icon icon-checked' %>
+<%= link_to l(:button_clear), { :project_id => @project, :set_filter => 1 }, :class => 'icon icon-reload' %>
 </p>
 <% end %>
 
@@ -43,9 +29,9 @@
 <%= render :partial => 'common/calendar', :locals => {:calendar => @calendar} %>
 
 <p class="legend cal">
-	<span class="starting"><%= l(:text_tip_task_begin_day) %></span>
-	<span class="ending"><%= l(:text_tip_task_end_day) %></span>
-	<span class="starting ending"><%= l(:text_tip_task_begin_end_day) %></span>
+	<span class="starting"><%= l(:text_tip_issue_begin_day) %></span>
+	<span class="ending"><%= l(:text_tip_issue_end_day) %></span>
+	<span class="starting ending"><%= l(:text_tip_issue_begin_end_day) %></span>
 </p>
 <% end %>
 

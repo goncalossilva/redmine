@@ -45,8 +45,8 @@ module Redmine
       time = time.to_time if time.is_a?(String)
       zone = User.current.time_zone
       local = zone ? time.in_time_zone(zone) : (time.utc? ? time.localtime : time)
-      Setting.time_format.blank? ? ::I18n.l(local, :format => (include_date ? :default : :time)) : 
-                                   ((include_date ? "#{format_date(time)} " : "") + "#{local.strftime(Setting.time_format)}")
+      (include_date ? "#{format_date(local)} " : "") +
+        (Setting.time_format.blank? ? ::I18n.l(local, :format => :time) : local.strftime(Setting.time_format))
     end
 
     def day_name(day)
@@ -56,11 +56,11 @@ module Redmine
     def month_name(month)
       ::I18n.t('date.month_names')[month]
     end
-    
+
     def valid_languages
       @@valid_languages ||= Dir.glob(File.join(Rails.root, 'config', 'locales', '*.yml')).collect {|f| File.basename(f).split('.').first}.collect(&:to_sym)
     end
-    
+
     def find_language(lang)
       @@languages_lookup = valid_languages.inject({}) {|k, v| k[v.to_s.downcase] = v; k }
       @@languages_lookup[lang.to_s.downcase]

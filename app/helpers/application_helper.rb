@@ -1,6 +1,6 @@
 # coding: UTF-8
-# redMine - project management software
-# Copyright (C) 2006-2007  Jean-Philippe Lang
+# Redmine - project management software
+# Copyright (C) 2006-2011  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -33,6 +33,11 @@ module ApplicationHelper
   end
 
   # Display a link if user is authorized
+  #
+  # @param [String] name Anchor text (passed to link_to)
+  # @param [Hash] options Hash params. This will checked by authorize_for to see if the user is authorized
+  # @param [optional, Hash] html_options Options passed to link_to
+  # @param [optional, Hash] parameters_for_method_reference Extra parameters for link_to
   def link_to_if_authorized(name, options = {}, html_options = nil, *parameters_for_method_reference)
     link_to(name, options, html_options, *parameters_for_method_reference) if authorize_for(options[:controller] || params[:controller], options[:action])
   end
@@ -100,8 +105,41 @@ module ApplicationHelper
   # * :text - Link text (default to the formatted revision)
   def link_to_revision(revision, project, options={})
     text = options.delete(:text) || format_revision(revision)
+    rev = revision.respond_to?(:identifier) ? revision.identifier : revision
 
-    link_to(text, {:controller => 'repositories', :action => 'revision', :id => project, :rev => revision}, :title => l(:label_revision_id, revision))
+    link_to(text, {:controller => 'repositories', :action => 'revision', :id => project, :rev => rev},
+            :title => l(:label_revision_id, format_revision(revision)))
+  end
+  
+  # Generates a link to a message
+  def link_to_message(message, options={}, html_options = nil)
+    link_to(
+      h(truncate(message.subject, :length => 60)),
+      { :controller => 'messages', :action => 'show',
+        :board_id => message.board_id,
+        :id => message.root,
+        :r => (message.parent_id && message.id),
+        :anchor => (message.parent_id ? "message-#{message.id}" : nil)
+      }.merge(options),
+      html_options
+    )
+  end
+
+  # Generates a link to a project if active
+  # Examples:
+  # 
+  #   link_to_project(project)                          # => link to the specified project overview
+  #   link_to_project(project, :action=>'settings')     # => link to project settings
+  #   link_to_project(project, {:only_path => false}, :class => "project") # => 3rd arg adds html options
+  #   link_to_project(project, {}, :class => "project") # => html options with default url (project overview)
+  #
+  def link_to_project(project, options={}, html_options = nil)
+    if project.active?
+      url = {:controller => 'projects', :action => 'show', :id => project}.merge(options)
+      link_to(h(project), url, html_options)
+    else
+      h(project)
+    end
   end
 
   def toggle_link(name, id, options={})
@@ -150,15 +188,15 @@ module ApplicationHelper
     end
   end
 
-  def render_page_hierarchy(pages, node=nil)
+  def render_page_hierarchy(pages, node=nil, options={})
     content = ''
     if pages[node]
       content << "<ul class=\"pages-hierarchy\">\n"
       pages[node].each do |page|
         content << "<li>"
-        content << link_to(h(page.pretty_title), {:controller => 'wiki', :action => 'index', :id => page.project, :page => page.title},
-                           :title => (page.respond_to?(:updated_on) ? l(:label_updated_time, distance_of_time_in_words(Time.now, page.updated_on)) : nil))
-        content << "\n" + render_page_hierarchy(pages, page.id) if pages[page.id]
+        content << link_to(h(page.pretty_title), {:controller => 'wiki', :action => 'show', :project_id => page.project, :id => page.title},
+                           :title => (options[:timestamp] && page.updated_on ? l(:label_updated_time, distance_of_time_in_words(Time.now, page.updated_on)) : nil))
+        content << "\n" + render_page_hierarchy(pages, page.id, options) if pages[page.id]
         content << "</li>\n"
       end
       content << "</ul>\n"
@@ -187,8 +225,8 @@ module ApplicationHelper
   # Renders the project quick-jump box
   # FIXME: should be a partial
   def render_project_jump_box
-    # Retrieve them now to avoid a COUNT query
-    projects = User.current.projects.all
+    return unless User.current.logged?
+    projects = User.current.memberships.collect(&:project).compact.uniq
     if projects.any?
       s = '<select onchange="if (this.value != \'\') { window.location = this.value; }">' +
             "<option value=''>#{ l(:label_jump_to_a_project) }</option>" +
@@ -218,15 +256,10 @@ module ApplicationHelper
   end
   
   # Yields the given block for each project with its level in the tree
+  #
+  # Wrapper for Project#project_tree
   def project_tree(projects, &block)
-    ancestors = []
-    projects.sort_by(&:lft).each do |project|
-      while (ancestors.any? && !project.is_descendant_of?(ancestors.last)) 
-        ancestors.pop
-      end
-      yield project, ancestors.size
-      ancestors << project
-    end
+    Project.project_tree(projects, &block)
   end
   
   def project_nested_ul(projects, &block)
@@ -287,7 +320,7 @@ module ApplicationHelper
   def time_tag(time)
     text = distance_of_time_in_words(Time.now, time)
     if @project
-      link_to(text, {:controller => 'projects', :action => 'activity', :id => @project, :from => time.to_date}, :title => format_time(time))
+      link_to(text, {:controller => 'activities', :action => 'index', :id => @project, :from => time.to_date}, :title => format_time(time))
     else
       content_tag('acronym', text, :title => format_time(time))
     end
@@ -305,20 +338,18 @@ module ApplicationHelper
     page_param = options.delete(:page_param) || :page
     per_page_links = options.delete(:per_page_links)
     url_param = params.dup
-    # don't reuse query params if filters are present
-    url_param.merge!(:fields => nil, :values => nil, :operators => nil) if url_param.delete(:set_filter)
 
     html = ''
     if paginator.current.previous
-      html << link_to_remote_content_update('« ' + l(:label_previous), url_param.merge(page_param => paginator.current.previous)) + ' '
+      html << link_to_content_update('« ' + l(:label_previous), url_param.merge(page_param => paginator.current.previous)) + ' '
     end
 
     html << (pagination_links_each(paginator, options) do |n|
-      link_to_remote_content_update(n.to_s, url_param.merge(page_param => n))
+      link_to_content_update(n.to_s, url_param.merge(page_param => n))
     end || '')
     
     if paginator.current.next
-      html << ' ' + link_to_remote_content_update((l(:label_next) + ' »'), url_param.merge(page_param => paginator.current.next))
+      html << ' ' + link_to_content_update((l(:label_next) + ' »'), url_param.merge(page_param => paginator.current.next))
     end
 
     unless count.nil?
@@ -332,14 +363,8 @@ module ApplicationHelper
   end
   
   def per_page_links(selected=nil)
-    url_param = params.dup
-    url_param.clear if url_param.has_key?(:set_filter)
-
     links = Setting.per_page_options_array.collect do |n|
-      n == selected ? n : link_to_remote(n, {:update => "content",
-                                             :url => params.dup.merge(:per_page => n),
-                                             :method => :get},
-                                            {:href => url_for(url_param.merge(:per_page => n))})
+      n == selected ? n : link_to_content_update(n, params.merge(:per_page => n))
     end
     links.size > 1 ? l(:label_display_per_page, links.join(', ')) : nil
   end
@@ -366,15 +391,15 @@ module ApplicationHelper
       h(Setting.app_title)
     else
       b = []
-      ancestors = (@project.root? ? [] : @project.ancestors.visible)
+      ancestors = (@project.root? ? [] : @project.ancestors.visible.all)
       if ancestors.any?
         root = ancestors.shift
-        b << link_to(h(root), {:controller => 'projects', :action => 'show', :id => root, :jump => current_menu_item}, :class => 'root')
+        b << link_to_project(root, {:jump => current_menu_item}, :class => 'root')
         if ancestors.size > 2
           b << '&#8230;'
           ancestors = ancestors[-2, 2]
         end
-        b += ancestors.collect {|p| link_to(h(p), {:controller => 'projects', :action => 'show', :id => p, :jump => current_menu_item}, :class => 'ancestor') }
+        b += ancestors.collect {|p| link_to_project(p, {:jump => current_menu_item}, :class => 'ancestor') }
       end
       b << h(@project)
       b.join(' &#187; ')
@@ -392,6 +417,19 @@ module ApplicationHelper
       @html_title ||= []
       @html_title += args
     end
+  end
+
+  # Returns the theme, controller name, and action as css classes for the
+  # HTML body.
+  def body_css_classes
+    css = []
+    if theme = Redmine::Themes.theme(Setting.ui_theme)
+      css << 'theme-' + theme.name
+    end
+
+    css << 'controller-' + params[:controller]
+    css << 'action-' + params[:action]
+    css.join(' ')
   end
 
   def accesskey(s)
@@ -420,12 +458,19 @@ module ApplicationHelper
     only_path = options.delete(:only_path) == false ? false : true
 
     text = Redmine::WikiFormatting.to_html(Setting.text_formatting, text, :object => obj, :attribute => attr) { |macro, args| exec_macro(macro, obj, args) }
-      
-    parse_non_pre_blocks(text) do |text|
-      [:parse_inline_attachments, :parse_wiki_links, :parse_redmine_links].each do |method_name|
+    
+    @parsed_headings = []
+    text = parse_non_pre_blocks(text) do |text|
+      [:parse_inline_attachments, :parse_wiki_links, :parse_redmine_links, :parse_headings].each do |method_name|
         send method_name, text, project, obj, attr, only_path, options
       end
     end
+    
+    if @parsed_headings.any?
+      replace_toc(text, @parsed_headings)
+    end
+    
+    text
   end
   
   def parse_non_pre_blocks(text)
@@ -495,7 +540,7 @@ module ApplicationHelper
       esc, all, page, title = $1, $2, $3, $5
       if esc.nil?
         if page =~ /^([^\:]+)\:(.*)$/
-          link_project = Project.find_by_name($1) || Project.find_by_identifier($1)
+          link_project = Project.find_by_identifier($1) || Project.find_by_name($1)
           page = $2
           title ||= $1 if page.blank?
         end
@@ -512,7 +557,8 @@ module ApplicationHelper
             when :local; "#{title}.html"
             when :anchor; "##{title}"   # used for single-file wiki export
             else
-              url_for(:only_path => only_path, :controller => 'wiki', :action => 'index', :id => link_project, :page => Wiki.titleize(page), :anchor => anchor)
+              wiki_page_id = page.present? ? Wiki.titleize(page) : nil
+              url_for(:only_path => only_path, :controller => 'wiki', :action => 'show', :project_id => link_project, :id => wiki_page_id, :anchor => anchor)
             end
           link_to((title || page), url, :class => ('wiki-page' + (wiki_page ? '' : ' new')))
         else
@@ -549,16 +595,26 @@ module ApplicationHelper
   #     source:some/file#L120 -> Link to line 120 of the file
   #     source:some/file@52#L120 -> Link to line 120 of the file's revision 52
   #     export:some/file -> Force the download of the file
-  #  Forum messages:
+  #   Forum messages:
   #     message#1218 -> Link to message with id 1218
+  #
+  #   Links can refer other objects from other projects, using project identifier:
+  #     identifier:r52
+  #     identifier:document:"Some document"
+  #     identifier:version:1.0.0
+  #     identifier:source:some/file
   def parse_redmine_links(text, project, obj, attr, only_path, options)
-    text.gsub!(%r{([\s\(,\-\[\>]|^)(!)?(attachment|document|version|commit|source|export|message|project)?((#|r)(\d+)|(:)([^"\s<>][^\s<>]*?|"[^"]+?"))(?=(?=[[:punct:]]\W)|,|\s|\]|<|$)}) do |m|
-      leading, esc, prefix, sep, identifier = $1, $2, $3, $5 || $7, $6 || $8
+    text.gsub!(%r{([\s\(,\-\[\>]|^)(!)?(([a-z0-9\-]+):)?(attachment|document|version|commit|source|export|message|project)?((#|r)(\d+)|(:)([^"\s<>][^\s<>]*?|"[^"]+?"))(?=(?=[[:punct:]]\W)|,|\s|\]|<|$)}) do |m|
+      leading, esc, project_prefix, project_identifier, prefix, sep, identifier = $1, $2, $3, $4, $5, $7 || $9, $8 || $10
       link = nil
+      if project_identifier
+        project = Project.visible.find_by_identifier(project_identifier)
+      end
       if esc.nil?
         if prefix.nil? && sep == 'r'
-          if project && (changeset = project.changesets.find_by_revision(identifier))
-            link = link_to("r#{identifier}", {:only_path => only_path, :controller => 'repositories', :action => 'revision', :id => project, :rev => changeset.revision},
+          # project.changesets.visible raises an SQL error because of a double join on repositories
+          if project && project.repository && (changeset = Changeset.visible.find_by_repository_id_and_revision(project.repository.id, identifier))
+            link = link_to("#{project_prefix}r#{identifier}", {:only_path => only_path, :controller => 'repositories', :action => 'revision', :id => project, :rev => changeset.revision},
                                       :class => 'changeset',
                                       :title => truncate_single_line(changeset.comments, :length => 100))
           end
@@ -572,29 +628,22 @@ module ApplicationHelper
                                         :title => "#{truncate(issue.subject, :length => 100)} (#{issue.status.name})")
             end
           when 'document'
-            if document = Document.find_by_id(oid, :include => [:project], :conditions => Project.visible_by(User.current))
+            if document = Document.visible.find_by_id(oid)
               link = link_to h(document.title), {:only_path => only_path, :controller => 'documents', :action => 'show', :id => document},
                                                 :class => 'document'
             end
           when 'version'
-            if version = Version.find_by_id(oid, :include => [:project], :conditions => Project.visible_by(User.current))
+            if version = Version.visible.find_by_id(oid)
               link = link_to h(version.name), {:only_path => only_path, :controller => 'versions', :action => 'show', :id => version},
                                               :class => 'version'
             end
           when 'message'
-            if message = Message.find_by_id(oid, :include => [:parent, {:board => :project}], :conditions => Project.visible_by(User.current))
-              link = link_to h(truncate(message.subject, :length => 60)), {:only_path => only_path,
-                                                                :controller => 'messages',
-                                                                :action => 'show',
-                                                                :board_id => message.board,
-                                                                :id => message.root,
-                                                                :anchor => (message.parent ? "message-#{message.id}" : nil)},
-                                                 :class => 'message'
+            if message = Message.visible.find_by_id(oid, :include => :parent)
+              link = link_to_message(message, {:only_path => only_path}, :class => 'message')
             end
           when 'project'
             if p = Project.visible.find_by_id(oid)
-              link = link_to h(p.name), {:only_path => only_path, :controller => 'projects', :action => 'show', :id => p},
-                                              :class => 'project'
+              link = link_to_project(p, {:only_path => only_path}, :class => 'project')
             end
           end
         elsif sep == ':'
@@ -602,26 +651,26 @@ module ApplicationHelper
           name = identifier.gsub(%r{^"(.*)"$}, "\\1")
           case prefix
           when 'document'
-            if project && document = project.documents.find_by_title(name)
+            if project && document = project.documents.visible.find_by_title(name)
               link = link_to h(document.title), {:only_path => only_path, :controller => 'documents', :action => 'show', :id => document},
                                                 :class => 'document'
             end
           when 'version'
-            if project && version = project.versions.find_by_name(name)
+            if project && version = project.versions.visible.find_by_name(name)
               link = link_to h(version.name), {:only_path => only_path, :controller => 'versions', :action => 'show', :id => version},
                                               :class => 'version'
             end
           when 'commit'
-            if project && (changeset = project.changesets.find(:first, :conditions => ["scmid LIKE ?", "#{name}%"]))
-              link = link_to h("#{name}"), {:only_path => only_path, :controller => 'repositories', :action => 'revision', :id => project, :rev => changeset.revision},
+            if project && project.repository && (changeset = Changeset.visible.find(:first, :conditions => ["repository_id = ? AND scmid LIKE ?", project.repository.id, "#{name}%"]))
+              link = link_to h("#{project_prefix}#{name}"), {:only_path => only_path, :controller => 'repositories', :action => 'revision', :id => project, :rev => changeset.identifier},
                                            :class => 'changeset',
                                            :title => truncate_single_line(changeset.comments, :length => 100)
             end
           when 'source', 'export'
-            if project && project.repository
+            if project && project.repository && User.current.allowed_to?(:browse_repository, project)
               name =~ %r{^[/\\]*(.*?)(@([0-9a-f]+))?(#(L\d+))?$}
               path, rev, anchor = $1, $3, $5
-              link = link_to h("#{prefix}:#{name}"), {:controller => 'repositories', :action => 'entry', :id => project,
+              link = link_to h("#{project_prefix}#{prefix}:#{name}"), {:controller => 'repositories', :action => 'entry', :id => project,
                                                       :path => to_path_param(path),
                                                       :rev => rev,
                                                       :anchor => anchor,
@@ -636,13 +685,61 @@ module ApplicationHelper
             end
           when 'project'
             if p = Project.visible.find(:first, :conditions => ["identifier = :s OR LOWER(name) = :s", {:s => name.downcase}])
-              link = link_to h(p.name), {:only_path => only_path, :controller => 'projects', :action => 'show', :id => p},
-                                              :class => 'project'
+              link = link_to_project(p, {:only_path => only_path}, :class => 'project')
             end
           end
         end
       end
-      (leading + (link || "#{prefix}#{sep}#{identifier}")).html_safe
+      (leading + (link || "#{project_prefix}#{prefix}#{sep}#{identifier}")).html_safe
+    end
+  end
+
+  HEADING_RE = /<h(1|2|3|4)( [^>]+)?>(.+?)<\/h(1|2|3|4)>/i unless const_defined?(:HEADING_RE)
+  
+  # Headings and TOC
+  # Adds ids and links to headings unless options[:headings] is set to false
+  def parse_headings(text, project, obj, attr, only_path, options)
+    return if options[:headings] == false
+    
+    text.gsub!(HEADING_RE) do
+      level, attrs, content = $1.to_i, $2, $3
+      item = strip_tags(content).strip
+      anchor = item.gsub(%r{[^\w\s\-]}, '').gsub(%r{\s+(\-+\s*)?}, '-')
+      @parsed_headings << [level, anchor, item]
+      "<a name=\"#{anchor}\"></a>\n<h#{level} #{attrs}>#{content}<a href=\"##{anchor}\" class=\"wiki-anchor\">&para;</a></h#{level}>"
+    end
+  end
+          
+  TOC_RE = /<p>\{\{([<>]?)toc\}\}<\/p>/i unless const_defined?(:TOC_RE)
+  
+  # Renders the TOC with given headings
+  def replace_toc(text, headings)
+    text.gsub!(TOC_RE) do
+      if headings.empty?
+        ''
+      else
+        div_class = 'toc'
+        div_class << ' right' if $1 == '>'
+        div_class << ' left' if $1 == '<'
+        out = "<ul class=\"#{div_class}\"><li>"
+        root = headings.map(&:first).min
+        current = root
+        started = false
+        headings.each do |level, anchor, item|
+          if level > current
+            out << '<ul><li>' * (level - current)
+          elsif level < current
+            out << "</li></ul>\n" * (current - level) + "</li><li>"
+          elsif started
+            out << '</li><li>'
+          end
+          out << "<a href=\"##{anchor}\">#{item}</a>"
+          current = level
+          started = true
+        end
+        out << '</li></ul>' * (current - root)
+        out << '</li></ul>'
+      end
     end
   end
 
@@ -710,6 +807,11 @@ module ApplicationHelper
         javascript_include_tag('context_menu') +
           stylesheet_link_tag('context_menu')
       end
+      if l(:direction) == 'rtl'
+        content_for :header_tags do
+          stylesheet_link_tag('context_menu_rtl')
+        end
+      end
       @context_menu_included = true
     end
     javascript_tag "new ContextMenu('#{ url_for(url) }')"
@@ -746,6 +848,8 @@ module ApplicationHelper
           'Calendar._FD = 1;' # Monday
         when 7
           'Calendar._FD = 0;' # Sunday
+        when 6
+          'Calendar._FD = 6;' # Saturday
         else
           '' # use language
         end
@@ -773,7 +877,7 @@ module ApplicationHelper
   # +user+ can be a User or a string that will be scanned for an email address (eg. 'joe <joe@foo.bar>')
   def avatar(user, options = { })
     if Setting.gravatar_enabled?
-      options.merge!({:ssl => Setting.protocol == 'https', :default => Setting.gravatar_default})
+      options.merge!({:ssl => (defined?(request) && request.ssl?), :default => Setting.gravatar_default})
       email = nil
       if user.respond_to?(:mail)
         email = user.mail
@@ -781,9 +885,50 @@ module ApplicationHelper
         email = $1
       end
       return gravatar(email.to_s.downcase, options) unless email.blank? rescue nil
+    else
+      ''
     end
   end
+  
+  # Returns the javascript tags that are included in the html layout head
+  def javascript_heads
+    tags = javascript_include_tag(:defaults)
+    unless User.current.pref.warn_on_leaving_unsaved == '0'
+      tags << "\n" + javascript_tag("Event.observe(window, 'load', function(){ new WarnLeavingUnsaved('#{escape_javascript( l(:text_warn_on_leaving_unsaved) )}'); });")
+    end
+    tags
+  end
 
+  def favicon
+    "<link rel='shortcut icon' href='#{image_path('/favicon.ico')}' />"
+  end
+
+  def robot_exclusion_tag
+    '<meta name="robots" content="noindex,follow,noarchive" />'
+  end
+  
+  # Returns true if arg is expected in the API response
+  def include_in_api_response?(arg)
+    unless @included_in_api_response
+      param = params[:include]
+      @included_in_api_response = param.is_a?(Array) ? param.collect(&:to_s) : param.to_s.split(',')
+      @included_in_api_response.collect!(&:strip)
+    end
+    @included_in_api_response.include?(arg.to_s)
+  end
+
+  # Returns options or nil if nometa param or X-Redmine-Nometa header
+  # was set in the request
+  def api_meta(options)
+    if params[:nometa].present? || request.headers['X-Redmine-Nometa']
+      # compatibility mode for activeresource clients that raise
+      # an error when unserializing an array with attributes
+      nil
+    else
+      options
+    end
+  end
+  
   private
 
   def wiki_helper
@@ -792,11 +937,7 @@ module ApplicationHelper
     return self
   end
   
-  def link_to_remote_content_update(text, url_params)
-    link_to_remote(text,
-      {:url => url_params, :method => :get, :update => 'content', :complete => 'window.scrollTo(0,0)'},
-      {:href => url_for(:params => url_params)}
-    )
+  def link_to_content_update(text, url_params = {}, html_options = {})
+    link_to(text, url_params, html_options)
   end
-  
 end

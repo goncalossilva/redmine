@@ -1,27 +1,67 @@
 # Redmine - project management software
-# Copyright (C) 2006-2010  Jean-Philippe Lang
+# Copyright (C) 2006-2011  Jean-Philippe Lang
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
 # as published by the Free Software Foundation; either version 2
 # of the License, or (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-require 'test_helper'
+require File.expand_path('../../../test_helper', __FILE__)
 
 class IssuesHelperTest < ActionView::TestCase
   include ApplicationHelper
   include IssuesHelper
 
-  fixtures :all
+  fixtures :attachments,
+           :auth_sources,
+           :boards,
+           :changes,
+           :changesets,
+           :comments,
+           :custom_fields,
+           :custom_fields_projects,
+           :custom_fields_trackers,
+           :custom_values,
+           :documents,
+           :enabled_modules,
+           :enumerations,
+           :groups_users,
+           :issue_categories,
+           :issue_relations,
+           :issue_statuses,
+           :issues,
+           :journal_details,
+           :journals,
+           :member_roles,
+           :members,
+           :messages,
+           :news,
+           :projects,
+           :projects_trackers,
+           :queries,
+           :repositories,
+           :roles,
+           :time_entries,
+           :tokens,
+           :trackers,
+           :user_preferences,
+           :users,
+           :versions,
+           :watchers,
+           :wiki_content_versions,
+           :wiki_contents,
+           :wiki_pages,
+           :wikis,
+           :workflows
 
   # Used by assert_select
   def html_document
@@ -41,6 +81,29 @@ class IssuesHelperTest < ActionView::TestCase
 
   def request
     @request ||= ActionController::TestRequest.new
+  end
+
+  def test_issue_heading
+    assert_equal "Bug #1", issue_heading(Issue.find(1))
+  end
+
+  def test_issues_destroy_confirmation_message_with_one_root_issue
+    assert_equal l(:text_issues_destroy_confirmation), issues_destroy_confirmation_message(Issue.find(1))
+  end
+
+  def test_issues_destroy_confirmation_message_with_an_arrayt_of_root_issues
+    assert_equal l(:text_issues_destroy_confirmation), issues_destroy_confirmation_message(Issue.find([1, 2]))
+  end
+
+  def test_issues_destroy_confirmation_message_with_one_parent_issue
+    Issue.find(2).update_attribute :parent_issue_id, 1
+    assert_equal l(:text_issues_destroy_confirmation) + "\n" + l(:text_issues_destroy_descendants_confirmation, :count => 1),
+      issues_destroy_confirmation_message(Issue.find(1))
+  end
+
+  def test_issues_destroy_confirmation_message_with_one_parent_issue_and_its_child
+    Issue.find(2).update_attribute :parent_issue_id, 1
+    assert_equal l(:text_issues_destroy_confirmation), issues_destroy_confirmation_message(Issue.find([1, 2]))
   end
 
   context "IssuesHelper#show_detail" do
