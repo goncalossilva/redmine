@@ -60,6 +60,23 @@ platforms :mri do
   end
 end
 
+platforms :mingw do
+  group :mysql do
+    gem "mysql"
+    #   gem "ruby-mysql"
+  end
+
+  group :postgres do
+    gem "pg", "~> 0.9.0"
+    #   gem "postgres-pr"
+  end
+
+  group :sqlite do
+    gem "sqlite3-ruby", "< 1.3", :require => "sqlite3"
+    #   please tell me, if you are fond of a pure ruby sqlite3 binding
+  end
+end
+
 platforms :jruby do
   gem "jruby-openssl"
 
