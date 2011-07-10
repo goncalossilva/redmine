@@ -66,6 +66,14 @@ platforms :mingw do
     #   gem "ruby-mysql"
   end
 
+  ## Add Windows support
+  ## https://github.com/brianmario/mysql2/issues/8
+  ## Getting mysql2 gem to work with Ruby on Rails 3.0 and Windows 7 64bit
+  ## http://paul-wong-jr.blogspot.com/2011/06/getting-mysql2-gem-to-work-with-ruby-on.html
+  # group :mysql2 do
+  #   gem "mysql2", "~> 0.2.7"
+  # end
+
   group :postgres do
     gem "pg", "~> 0.9.0"
     #   gem "postgres-pr"
