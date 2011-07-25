@@ -19,6 +19,9 @@ group :test do
   gem 'shoulda', '~> 2.10.3'
   gem 'mocha'
   gem 'edavis10-object_daddy', :require => 'object_daddy'
+
+  platforms :mri_18 do gem 'ruby-debug' end
+  platforms :mri_19 do gem 'ruby-debug19', :require => 'ruby-debug' end
 end
 
 group :openid do
