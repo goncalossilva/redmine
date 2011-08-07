@@ -446,8 +446,8 @@ module ApplicationHelper
       css << 'theme-' + theme.name
     end
 
-    css << 'controller-' + params[:controller]
-    css << 'action-' + params[:action]
+    css << 'controller-' + (params[:controller] || "")
+    css << 'action-' + (params[:action] || "")
     css.join(' ')
   end
 
