@@ -3,7 +3,7 @@
                    :builder => TabularFormBuilder,
                    :lang => current_language do |f| %>
 
-<%= error_messages_for 'wiki' %>
+<%= error_messages_for %> <!-- FIXME: missing 'wiki' -->
 
 <div class="box tabular">
 <p><%= f.text_field :start_page, :size => 60, :required => true %><br />
