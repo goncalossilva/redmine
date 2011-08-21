@@ -24,19 +24,22 @@ class CustomField < ActiveRecord::Base
   validates_uniqueness_of :name, :scope => :type
   validates_length_of :name, :maximum => 30
   validates_inclusion_of :field_format, :in => Redmine::CustomFieldFormat.available_formats
+  validate :validate_values
+
+  before_validation :lock_fields
 
   def initialize(attributes = nil)
     super
     self.possible_values ||= []
   end
 
-  def before_validation
+  def lock_fields
     # make sure these fields are not searchable
     self.searchable = false if %w(int float date bool).include?(field_format)
     true
   end
 
-  def validate
+  def validate_values
     if self.field_format == "list"
       errors.add(:possible_values, :blank) if self.possible_values.nil? || self.possible_values.empty?
       errors.add(:possible_values, :invalid) unless self.possible_values.is_a? Array
