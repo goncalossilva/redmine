@@ -26,8 +26,9 @@ class AuthSourceLdap < AuthSource
   validates_numericality_of :port, :only_integer => true
 
   before_validation :strip_ldap_attributes
+  after_initialize :set_port
 
-  def after_initialize
+  def set_port
     self.port = 389 if self.port == 0
   end
 
