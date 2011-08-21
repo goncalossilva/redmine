@@ -29,7 +29,9 @@ class IssueStatus < ActiveRecord::Base
 
   scope :named, lambda {|arg| { :conditions => ["LOWER(#{table_name}.name) = LOWER(?)", arg.to_s.strip]}}
 
-  def after_save
+  after_save :update_default
+
+  def update_default
     IssueStatus.update_all("is_default=#{connection.quoted_false}", ['id <> ?', id]) if self.is_default?
   end
 
