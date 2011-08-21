@@ -222,6 +222,7 @@ module ApplicationHelper
   end
 
   # Renders the project quick-jump box
+  # FIXME: should be a partial
   def render_project_jump_box
     return unless User.current.logged?
     projects = User.current.memberships.collect(&:project).compact.uniq
