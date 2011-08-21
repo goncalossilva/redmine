@@ -2,7 +2,7 @@
 
 <h2><%=h @original_title %></h2>
 
-<%= error_messages_for 'page' %>
+<%= error_messages_for %> <!-- FIXME: missing 'page' -->
 
 <% labelled_tabular_form_for :wiki_page, @page, :url => { :action => 'rename' } do |f| %>
 <div class="box">
