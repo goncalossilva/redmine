@@ -52,10 +52,10 @@
 <p class="pagination"><%= pagination_links_full @issue_pages, @issue_count %></p>
 <% end %>
 
-<% other_formats_links do |f| %>
-  <%= f.link_to 'Atom', :url => params.merge(:key => User.current.rss_key) %>
-  <%= f.link_to 'CSV', :url => params %>
-  <%= f.link_to 'PDF', :url => params %>
+<%= other_formats_links do |f| %>
+  <% f.link_to 'Atom', :url => params.merge(:key => User.current.rss_key) %>
+  <% f.link_to 'CSV', :url => params %>
+  <% f.link_to 'PDF', :url => params %>
 <% end %>
 
 <% end %>
