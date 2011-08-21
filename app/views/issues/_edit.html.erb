@@ -4,7 +4,7 @@
                                        :class => nil,
                                        :method => :put,
                                        :multipart => true} do |f| %>
-    <%= error_messages_for 'issue', 'time_entry' %>
+    <%= error_messages_for %> <!-- FIXME: missing 'issue', 'time_entry' -->
     <div class="box">
     <% if @edit_allowed || !@allowed_statuses.empty? %>
         <fieldset class="tabular"><legend><%= l(:label_change_properties) %>
