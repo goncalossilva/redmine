@@ -39,12 +39,16 @@ class TimeEntry < ActiveRecord::Base
   validates_numericality_of :hours, :allow_nil => true, :message => :invalid
   validates_length_of :comments, :maximum => 255, :allow_nil => true
 
+  validate :validate_time_entry
+  before_validation :update_project
+  after_initialize :update_activity
+
   scope :visible, lambda {|*args| {
     :include => :project,
     :conditions => Project.allowed_to_condition(args.shift || User.current, :view_time_entries, *args)
   }}
 
-  def after_initialize
+  def update_activity
     if new_record? && self.activity.nil?
       if default_activity = TimeEntryActivity.default
         self.activity_id = default_activity.id
@@ -53,11 +57,11 @@ class TimeEntry < ActiveRecord::Base
     end
   end
 
-  def before_validation
+  def update_project
     self.project = issue.project if issue && project.nil?
   end
 
-  def validate
+  def validate_time_entry
     errors.add :hours, :invalid if hours && (hours < 0 || hours >= 1000)
     errors.add :project_id, :invalid if project.nil?
     errors.add :issue_id, :invalid if (issue_id && !issue) || (issue && project!=issue.project)
