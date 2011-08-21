@@ -108,9 +108,8 @@
   </div>
 <% end %>
 
-<% other_formats_links do |f| %>
-	<%= f.link_to 'Atom', :url => {:key => User.current.rss_key} %>
-	<%= f.link_to 'PDF' %>
+<%= other_formats_links do |f| %>
+	<% f.link_to('Atom', :url => {:key => User.current.rss_key}) + f.link_to('PDF') %>
 <% end %>
 
 <% html_title h("#{@issue.tracker.name} ##{@issue.id}: #{@issue.subject}") %>
