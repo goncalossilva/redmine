@@ -6,7 +6,7 @@
                                :project_id => @time_entry.project
                              },
                              :html => {:method => @time_entry.new_record? ? :post : :put}) do |f| %>
-<%= error_messages_for 'time_entry' %>
+<%= error_messages_for %> <!-- FIXME: missing 'time_entry' -->
 <%= back_url_hidden_field_tag %>
 
 <div class="box">
