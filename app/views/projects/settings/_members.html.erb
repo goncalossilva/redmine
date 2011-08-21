@@ -1,4 +1,4 @@
-<%= error_messages_for 'member' %>
+<%= error_messages_for %> <!-- FIXME: missing 'member' -->
 <% roles = Role.find_all_givable
    members = @project.member_principals.find(:all, :include => [:roles, :principal]).sort %>
 
