@@ -400,9 +400,8 @@ module ApplicationHelper
   end
 
   def other_formats_links(&block)
-    concat('<p class="other-formats">' + l(:label_export_to))
-    yield Redmine::Views::OtherFormatsBuilder.new(self)
-    concat('</p>')
+    html = yield Redmine::Views::OtherFormatsBuilder.new(self)
+    "<p class='other-formats'>#{l(:label_export_to)} #{html}</p>".html_safe
   end
 
   def page_header_title
