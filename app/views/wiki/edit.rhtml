@@ -1,3 +1,5 @@
+<%= wiki_page_breadcrumb(@page) %>
+
 <h2><%=h @page.pretty_title %></h2>
 
 <% form_for :content, @content, :url => {:action => 'update', :id => @page.title}, :html => {:method => :put, :multipart => true, :id => 'wiki_form'} do |f| %>
@@ -26,4 +28,4 @@
   <%= robot_exclusion_tag %>
 <% end %>
 
-<% html_title @page.pretty_title %>
+<% html_title h(@page.pretty_title) %>

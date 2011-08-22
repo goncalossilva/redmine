@@ -63,7 +63,7 @@ class RepositoriesCvsControllerTest < ActionController::TestCase
       assert_equal 'file', entry.kind
 
       assert_not_nil assigns(:changesets)
-      assigns(:changesets).size > 0
+      assert assigns(:changesets).size > 0
     end
 
     def test_browse_directory
@@ -208,6 +208,46 @@ class RepositoriesCvsControllerTest < ActionController::TestCase
                         :content => /LANG/
                         }
                    }
+    end
+
+    def test_destroy_valid_repository
+      @request.session[:user_id] = 1 # admin
+      @repository.fetch_changesets
+      @repository.reload
+      assert @repository.changesets.count > 0
+
+      get :destroy, :id => PRJ_ID
+      assert_response 302
+      @project.reload
+      assert_nil @project.repository
+    end
+
+    def test_destroy_invalid_repository
+      @request.session[:user_id] = 1 # admin
+      @repository.fetch_changesets
+      @repository.reload
+      assert @repository.changesets.count > 0
+
+      get :destroy, :id => PRJ_ID
+      assert_response 302
+      @project.reload
+      assert_nil @project.repository
+
+      @repository  = Repository::Cvs.create(
+                              :project      => Project.find(PRJ_ID),
+                              :root_url     => "/invalid",
+                              :url          => MODULE_NAME,
+                              :log_encoding => 'UTF-8'
+                              )
+      assert @repository
+      @repository.fetch_changesets
+      @repository.reload
+      assert_equal 0, @repository.changesets.count
+
+      get :destroy, :id => PRJ_ID
+      assert_response 302
+      @project.reload
+      assert_nil @project.repository
     end
   else
     puts "CVS test repository NOT FOUND. Skipping functional tests !!!"

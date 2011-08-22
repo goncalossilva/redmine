@@ -11,17 +11,24 @@
 <%= link_to_if_authorized(l(:label_history), {:action => 'history', :id => @page.title}, :class => 'icon icon-history') %>
 </div>
 
-<%= breadcrumb(@page.ancestors.reverse.collect {|parent| link_to h(parent.pretty_title), {:id => parent.title, :project_id => parent.project}}) %>
+<%= wiki_page_breadcrumb(@page) %>
 
 <% if @content.version != @page.content.version %>
     <p>
-    <%= link_to(('« ' + l(:label_previous)), :action => 'show', :id => @page.title, :project_id => @page.project, :version => (@content.version - 1)) + " - " if @content.version > 1 %>
+    <%= link_to(("\xc2\xab " + l(:label_previous)),
+                :action => 'show', :id => @page.title, :project_id => @page.project,
+                :version => (@content.version - 1)) + " - " if @content.version > 1 %>
     <%= "#{l(:label_version)} #{@content.version}/#{@page.content.version}" %>
-    <%= '(' + link_to('diff', :controller => 'wiki', :action => 'diff', :id => @page.title, :project_id => @page.project, :version => @content.version) + ')' if @content.version > 1 %> - 
-    <%= link_to((l(:label_next) + ' »'), :action => 'show', :id => @page.title, :project_id => @page.project, :version => (@content.version + 1)) + " - " if @content.version < @page.content.version %>
+    <%= '(' + link_to(l(:label_diff), :controller => 'wiki', :action => 'diff',
+                      :id => @page.title, :project_id => @page.project,
+                      :version => @content.version) + ')' if @content.version > 1 %> - 
+    <%= link_to((l(:label_next) + " \xc2\xbb"), :action => 'show',
+                :id => @page.title, :project_id => @page.project,
+                :version => (@content.version + 1)) + " - " if @content.version < @page.content.version %>
     <%= link_to(l(:label_current_version), :action => 'show', :id => @page.title, :project_id => @page.project) %>
     <br />
-    <em><%= @content.author ? @content.author.name : "anonyme" %>, <%= format_time(@content.updated_on) %> </em><br />
+    <em><%= @content.author ? link_to_user(@content.author) : l(:label_user_anonymous)
+         %>, <%= format_time(@content.updated_on) %> </em><br />
     <%=h @content.comments %>
     </p>
     <hr />
@@ -58,4 +65,4 @@
   <%= render :partial => 'sidebar' %>
 <% end %>
 
-<% html_title @page.pretty_title %>
+<% html_title h(@page.pretty_title) %>

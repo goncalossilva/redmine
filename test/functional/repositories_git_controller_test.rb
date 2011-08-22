@@ -46,9 +46,10 @@ class RepositoriesGitControllerTest < ActionController::TestCase
     @request    = ActionController::TestRequest.new
     @response   = ActionController::TestResponse.new
     User.current = nil
+    @project    = Project.find(PRJ_ID)
     @repository = Repository::Git.create(
-                      :project => Project.find(3),
-                      :url     => REPOSITORY_PATH,
+                      :project       => @project,
+                      :url           => REPOSITORY_PATH,
                       :path_encoding => 'ISO-8859-1'
                       )
     assert @repository
@@ -79,7 +80,7 @@ class RepositoriesGitControllerTest < ActionController::TestCase
       assert assigns(:entries).detect {|e| e.name == 'filemane with spaces.txt' && e.kind == 'file'}
       assert assigns(:entries).detect {|e| e.name == ' filename with a leading space.txt ' && e.kind == 'file'}
       assert_not_nil assigns(:changesets)
-      assigns(:changesets).size > 0
+      assert assigns(:changesets).size > 0
     end
 
     def test_browse_branch
@@ -95,7 +96,7 @@ class RepositoriesGitControllerTest < ActionController::TestCase
       assert assigns(:entries).detect {|e| e.name == 'README' && e.kind == 'file'}
       assert assigns(:entries).detect {|e| e.name == 'test.txt' && e.kind == 'file'}
       assert_not_nil assigns(:changesets)
-      assigns(:changesets).size > 0
+      assert assigns(:changesets).size > 0
     end
 
     def test_browse_tag
@@ -109,9 +110,9 @@ class RepositoriesGitControllerTest < ActionController::TestCase
         assert_response :success
         assert_template 'show'
         assert_not_nil assigns(:entries)
-        assigns(:entries).size > 0
+        assert assigns(:entries).size > 0
         assert_not_nil assigns(:changesets)
-        assigns(:changesets).size > 0
+        assert assigns(:changesets).size > 0
       end
     end
 
@@ -128,7 +129,7 @@ class RepositoriesGitControllerTest < ActionController::TestCase
       assert_equal 'file', entry.kind
       assert_equal 'images/edit.png', entry.path
       assert_not_nil assigns(:changesets)
-      assigns(:changesets).size > 0
+      assert assigns(:changesets).size > 0
     end
 
     def test_browse_at_given_revision
@@ -141,7 +142,7 @@ class RepositoriesGitControllerTest < ActionController::TestCase
       assert_not_nil assigns(:entries)
       assert_equal ['delete.png'], assigns(:entries).collect(&:name)
       assert_not_nil assigns(:changesets)
-      assigns(:changesets).size > 0
+      assert assigns(:changesets).size > 0
     end
 
     def test_changes
@@ -371,6 +372,45 @@ class RepositoriesGitControllerTest < ActionController::TestCase
         assert_response 404
         assert_error_tag :content => /was not found/
       end
+    end
+
+    def test_destroy_valid_repository
+      @request.session[:user_id] = 1 # admin
+      @repository.fetch_changesets
+      @repository.reload
+      assert @repository.changesets.count > 0
+
+      get :destroy, :id => PRJ_ID
+      assert_response 302
+      @project.reload
+      assert_nil @project.repository
+    end
+
+    def test_destroy_invalid_repository
+      @request.session[:user_id] = 1 # admin
+      @repository.fetch_changesets
+      @repository.reload
+      assert @repository.changesets.count > 0
+
+      get :destroy, :id => PRJ_ID
+      assert_response 302
+      @project.reload
+      assert_nil @project.repository
+
+      @repository = Repository::Git.create(
+                      :project       => @project,
+                      :url           => "/invalid",
+                      :path_encoding => 'ISO-8859-1'
+                      )
+      assert @repository
+      @repository.fetch_changesets
+      @repository.reload
+      assert_equal 0, @repository.changesets.count
+
+      get :destroy, :id => PRJ_ID
+      assert_response 302
+      @project.reload
+      assert_nil @project.repository
     end
 
     private

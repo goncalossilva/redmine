@@ -48,11 +48,11 @@ module IssuesHelper
 
     (link_to_issue(issue) + "<br /><br />" +
       "<strong>#{@cached_label_project}</strong>: #{link_to_project(issue.project)}<br />" +
-      "<strong>#{@cached_label_status}</strong>: #{issue.status.name}<br />" +
+      "<strong>#{@cached_label_status}</strong>: #{h(issue.status.name)}<br />" +
       "<strong>#{@cached_label_start_date}</strong>: #{format_date(issue.start_date)}<br />" +
       "<strong>#{@cached_label_due_date}</strong>: #{format_date(issue.due_date)}<br />" +
-      "<strong>#{@cached_label_assigned_to}</strong>: #{issue.assigned_to}<br />" +
-      "<strong>#{@cached_label_priority}</strong>: #{issue.priority.name}").html_safe
+      "<strong>#{@cached_label_assigned_to}</strong>: #{h(issue.assigned_to)}<br />" +
+      "<strong>#{@cached_label_priority}</strong>: #{h(issue.priority.name)}").html_safe
   end
 
   def issue_heading(issue)
@@ -145,7 +145,7 @@ module IssuesHelper
     # links to #index on issues/show
     url_params = controller_name == 'issues' ? {:controller => 'issues', :action => 'index', :project_id => @project} : params
 
-    content_tag('h3', title) +
+    content_tag('h3', h(title)) +
       queries.collect {|query|
           link_to(h(query.name), url_params.merge(:query_id => query))
         }.join('<br />')
@@ -206,7 +206,7 @@ module IssuesHelper
     unless no_html
       label = content_tag('strong', label)
       old_value = content_tag("i", h(old_value)) if detail.old_value
-      old_value = content_tag("strike", old_value) if detail.old_value and (!detail.value or detail.value.empty?)
+      old_value = content_tag("strike", old_value) if detail.old_value and detail.value.blank?
       if detail.property == 'attachment' && !value.blank? && a = Attachment.find_by_id(detail.prop_key)
         # Link to the attachment if it has not been removed
         value = link_to_attachment(a)
