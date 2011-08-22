@@ -66,7 +66,8 @@ end
 
 platforms :mri_18 do
   group :sqlite do
-    gem "sqlite3-ruby", "< 1.3", :require => "sqlite3"
+    # gem "sqlite3-ruby", "< 1.3", :require => "sqlite3"
+    gem "sqlite3"
   end
 end
 
