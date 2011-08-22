@@ -539,7 +539,8 @@ module CollectiveIdea #:nodoc:
                 "WHEN #{self.class.base_class.primary_key} = :id THEN :new_parent " +
                 "ELSE #{quoted_parent_column_name} END",
               {:a => a, :b => b, :c => c, :d => d, :id => self.id, :new_parent => new_parent}
-            ], nested_set_scope.proxy_options[:conditions])
+            ]) #, nested_set_scope.proxy_options[:conditions])
+              # http://memo.yomukaku.net/entries/123
           end
           target.reload_nested_set if target
           self.reload_nested_set
