@@ -294,6 +294,10 @@ fieldset#date-range p { margin: 2px 0 2px 0; }
 fieldset#filters table { border-collapse: collapse; }
 fieldset#filters table td { padding: 0; vertical-align: middle; }
 fieldset#filters tr.filter { height: 2em; }
+fieldset#filters td.field { width:200px; }
+fieldset#filters td.operator { width:170px; }
+fieldset#filters td.values { white-space:nowrap; }
+fieldset#filters td.values img { vertical-align: bottom; }
 fieldset#filters td.add-filter { text-align: right; vertical-align: top; }
 .buttons { font-size: 0.9em; margin-bottom: 1.4em; margin-top: 1em; }
 
@@ -445,6 +449,8 @@ fieldset#notified_events .parent { padding-left: 20px; }
 .summary {font-style: italic;}
 
 #attachments_fields input[type=text] {margin-left: 8px; }
+#attachments_fields span {display:block; white-space:nowrap;}
+#attachments_fields img {vertical-align: middle;}
 
 div.attachments { margin-top: 12px; }
 div.attachments p { margin:4px 0 2px 0; }
@@ -893,6 +899,7 @@ padding-bottom: 3px;
 .icon-issue { background-image: url(../images/ticket.png); }
 .icon-zoom-in { background-image: url(../images/zoom_in.png); }
 .icon-zoom-out { background-image: url(../images/zoom_out.png); }
+.icon-passwd { background-image: url(../images/textfield_key.png); }
 
 .icon-file { background-image: url(../images/files/default.png); }
 .icon-file.text-plain { background-image: url(../images/files/text.png); }
