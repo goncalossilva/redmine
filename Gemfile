@@ -4,7 +4,8 @@ source :rubyforge
 source :gemcutter
 
 # gem 'bundler', '~> 1.0.0'
-gem 'rails', '3.0.9'
+# gem 'rails', '3.0.9'
+gem 'rails', '3.1.0.rc5'
 
 # gem 'rubytree', '0.5.2', :require => 'tree'
 gem 'rubytree', '0.7.0'
