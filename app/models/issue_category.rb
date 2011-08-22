@@ -24,7 +24,7 @@ class IssueCategory < ActiveRecord::Base
   validates_uniqueness_of :name, :scope => [:project_id]
   validates_length_of :name, :maximum => 30
 
-  named_scope :named, lambda {|arg| { :conditions => ["LOWER(#{table_name}.name) = LOWER(?)", arg.to_s.strip]}}
+  scope :named, lambda {|arg| { :conditions => ["LOWER(#{table_name}.name) = LOWER(?)", arg.to_s.strip]}}
 
   alias :destroy_without_reassign :destroy
 
