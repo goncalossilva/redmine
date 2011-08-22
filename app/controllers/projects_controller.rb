@@ -24,7 +24,8 @@ class ProjectsController < ApplicationController
   before_filter :authorize, :except => [ :index, :list, :new, :create, :copy, :archive, :unarchive, :destroy]
   before_filter :authorize_global, :only => [:new, :create]
   before_filter :require_admin, :only => [ :copy, :archive, :unarchive, :destroy ]
-  accept_key_auth :index, :show, :create, :update, :destroy
+  accept_rss_auth :index
+  accept_api_auth :index, :show, :create, :update, :destroy
 
   after_filter :only => [:create, :edit, :update, :archive, :unarchive, :destroy] do |controller|
     if controller.request.post?
@@ -86,7 +87,10 @@ class ProjectsController < ApplicationController
       respond_to do |format|
         format.html { 
           flash[:notice] = l(:notice_successful_create)
-          redirect_to :controller => 'projects', :action => 'settings', :id => @project
+          redirect_to(params[:continue] ?
+            {:controller => 'projects', :action => 'new', :project => {:parent_id => @project.parent_id}.reject {|k,v| v.nil?}} :
+            {:controller => 'projects', :action => 'settings', :id => @project}
+          )
         }
         format.api  { render :action => 'show', :status => :created, :location => url_for(:controller => 'projects', :action => 'show', :id => @project.id) }
       end

@@ -37,8 +37,9 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
     @request    = ActionController::TestRequest.new
     @response   = ActionController::TestResponse.new
     User.current = nil
+    @project    = Project.find(PRJ_ID)
     @repository = Repository::Mercurial.create(
-                      :project => Project.find(PRJ_ID),
+                      :project => @project,
                       :url     => REPOSITORY_PATH,
                       :path_encoding => 'ISO-8859-1'
                       )
@@ -74,7 +75,7 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
       assert assigns(:entries).detect {|e| e.name == 'sources' && e.kind == 'dir'}
       assert assigns(:entries).detect {|e| e.name == 'README'  && e.kind == 'file'}
       assert_not_nil assigns(:changesets)
-      assigns(:changesets).size > 0
+      assert assigns(:changesets).size > 0
     end
 
     def test_show_directory
@@ -90,7 +91,7 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
       assert_equal 'file', entry.kind
       assert_equal 'images/edit.png', entry.path
       assert_not_nil assigns(:changesets)
-      assigns(:changesets).size > 0
+      assert assigns(:changesets).size > 0
     end
 
     def test_show_at_given_revision
@@ -103,7 +104,7 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
         assert_not_nil assigns(:entries)
         assert_equal ['delete.png'], assigns(:entries).collect(&:name)
         assert_not_nil assigns(:changesets)
-        assigns(:changesets).size > 0
+        assert assigns(:changesets).size > 0
       end
     end
 
@@ -121,7 +122,7 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
                      assigns(:entries).collect(&:name)
         changesets = assigns(:changesets)
         assert_not_nil changesets
-        assigns(:changesets).size > 0
+        assert assigns(:changesets).size > 0
         assert_equal %w(13 11 10 9), changesets.collect(&:revision)
       end
     end
@@ -162,7 +163,7 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
         assert_not_nil assigns(:entries)
         assert assigns(:entries).size > 0
         assert_not_nil assigns(:changesets)
-        assigns(:changesets).size > 0
+        assert assigns(:changesets).size > 0
       end
     end
 
@@ -180,7 +181,7 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
         assert_not_nil assigns(:entries)
         assert assigns(:entries).size > 0
         assert_not_nil assigns(:changesets)
-        assigns(:changesets).size > 0
+        assert assigns(:changesets).size > 0
       end
     end
 
@@ -431,6 +432,45 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
         assert_response 404
         assert_error_tag :content => /was not found/
       end
+    end
+
+    def test_destroy_valid_repository
+      @request.session[:user_id] = 1 # admin
+      @repository.fetch_changesets
+      @repository.reload
+      assert @repository.changesets.count > 0
+
+      get :destroy, :id => PRJ_ID
+      assert_response 302
+      @project.reload
+      assert_nil @project.repository
+    end
+
+    def test_destroy_invalid_repository
+      @request.session[:user_id] = 1 # admin
+      @repository.fetch_changesets
+      @repository.reload
+      assert @repository.changesets.count > 0
+
+      get :destroy, :id => PRJ_ID
+      assert_response 302
+      @project.reload
+      assert_nil @project.repository
+
+      @repository = Repository::Mercurial.create(
+                      :project => Project.find(PRJ_ID),
+                      :url     => "/invalid",
+                      :path_encoding => 'ISO-8859-1'
+                      )
+      assert @repository
+      @repository.fetch_changesets
+      @repository.reload
+      assert_equal 0, @repository.changesets.count
+
+      get :destroy, :id => PRJ_ID
+      assert_response 302
+      @project.reload
+      assert_nil @project.repository
     end
   else
     puts "Mercurial test repository NOT FOUND. Skipping functional tests !!!"

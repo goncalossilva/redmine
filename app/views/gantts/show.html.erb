@@ -92,7 +92,7 @@ height = (show_weeks ? header_heigth : header_heigth + g_height)
 	width = ((month_f >> 1) - month_f) * zoom - 1
 	%>
 	<div style="left:<%= left %>px;width:<%= width %>px;height:<%= height %>px;" class="gantt_hdr">
-	<%= link_to "#{month_f.year}-#{month_f.month}", @gantt.params.merge(:year => month_f.year, :month => month_f.month), :title => "#{month_name(month_f.month)} #{month_f.year}"%>
+	<%= link_to h("#{month_f.year}-#{month_f.month}"), @gantt.params.merge(:year => month_f.year, :month => month_f.month), :title => "#{month_name(month_f.month)} #{month_f.year}"%>
 	</div>
 	<% 
 	left = left + width + 1
@@ -169,8 +169,8 @@ if Date.today >= @gantt.date_from and Date.today <= @gantt.date_to %>
 
 <table width="100%">
 <tr>
-<td align="left"><%= link_to_content_update('« ' + l(:label_previous), params.merge(@gantt.params_previous)) %></td>
-<td align="right"><%= link_to_content_update(l(:label_next) + ' »', params.merge(@gantt.params_next)) %></td>
+<td align="left"><%= link_to_content_update("\xc2\xab " + l(:label_previous), params.merge(@gantt.params_previous)) %></td>
+<td align="right"><%= link_to_content_update(l(:label_next) + " \xc2\xbb", params.merge(@gantt.params_next)) %></td>
 </tr>
 </table>
 
