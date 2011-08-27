@@ -69,11 +69,11 @@ bg:
         other: "почти %{count} години"
 
   number:
-    # Default format for numbers
     format:
       separator: "."
       delimiter: ""
       precision: 3
+
     human:
       format:
         precision: 1
@@ -88,7 +88,6 @@ bg:
           mb: "MB"
           gb: "GB"
           tb: "TB"
-
 
 # Used in array.to_sentence.
   support:
@@ -695,6 +694,7 @@ bg:
   label_statistics: Статистики
   label_commits_per_month: Ревизии по месеци
   label_commits_per_author: Ревизии по автор
+  label_diff: diff  
   label_view_diff: Виж разликите
   label_diff_inline: хоризонтално
   label_diff_side_by_side: вертикално
@@ -978,5 +978,3 @@ bg:
   enumeration_doc_categories: Категории документи
   enumeration_activities: Дейности (time tracking)
   enumeration_system_activity: Системна активност
-
-  label_diff: diff
