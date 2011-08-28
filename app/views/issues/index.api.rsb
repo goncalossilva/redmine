@@ -30,5 +30,5 @@ api.array :issues, api_meta(:total_count => @issue_count, :offset => @offset, :l
         end
       end if include_in_api_response?('relations')
     end
-  end
+  end if not @issues.nil?
 end
