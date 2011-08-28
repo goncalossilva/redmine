@@ -26,7 +26,11 @@ group :openid do
 end
 
 group :rmagick do
-  gem "rmagick", "~> 1.15.17"
+  platforms :mri_18 do gem "rmagick", "~> 1.15.17" end
+  ## You cannot specify the same gem twice with different version requirements.
+  ## You specified: rmagick (~> 1.15.17) and rmagick (>= 0)
+  ## https://github.com/carlhuda/bundler/issues/751
+  # platforms :mri_19 do gem "rmagick" end
 end
 
 # Use the commented pure ruby gems, if you have not the needed prerequisites on
