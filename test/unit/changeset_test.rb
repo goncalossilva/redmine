@@ -41,9 +41,9 @@ class ChangesetTest < ActiveSupport::TestCase
 
     c = Changeset.new(:repository   => Project.find(1).repository,
                       :committed_on => Time.now,
-                      :comments     => 'New commit (#2). Fixes #1')
-    c.scan_comment_for_issue_ids
-
+                      :comments     => 'New commit (#2). Fixes #1',
+                      :revision     => '12345')
+    assert c.save
     assert_equal [1, 2], c.issue_ids.sort
     fixed = Issue.find(1)
     assert fixed.closed?
@@ -54,24 +54,22 @@ class ChangesetTest < ActiveSupport::TestCase
   def test_ref_keywords
     Setting.commit_ref_keywords = 'refs'
     Setting.commit_fix_keywords = ''
-
     c = Changeset.new(:repository   => Project.find(1).repository,
                       :committed_on => Time.now,
-                      :comments     => 'Ignores #2. Refs #1')
-    c.scan_comment_for_issue_ids
-
+                      :comments     => 'Ignores #2. Refs #1',
+                      :revision     => '12345')
+    assert c.save
     assert_equal [1], c.issue_ids.sort
   end
 
   def test_ref_keywords_any_only
     Setting.commit_ref_keywords = '*'
     Setting.commit_fix_keywords = ''
-
     c = Changeset.new(:repository   => Project.find(1).repository,
                       :committed_on => Time.now,
-                      :comments     => 'Ignores #2. Refs #1')
-    c.scan_comment_for_issue_ids
-
+                      :comments     => 'Ignores #2. Refs #1',
+                      :revision     => '12345')
+    assert c.save
     assert_equal [1, 2], c.issue_ids.sort
   end
 
@@ -142,43 +140,40 @@ class ChangesetTest < ActiveSupport::TestCase
 
   def test_ref_keywords_any_line_start
     Setting.commit_ref_keywords = '*'
-
     c = Changeset.new(:repository   => Project.find(1).repository,
                       :committed_on => Time.now,
-                      :comments     => '#1 is the reason of this commit')
-    c.scan_comment_for_issue_ids
-
+                      :comments     => '#1 is the reason of this commit',
+                      :revision     => '12345')
+    assert c.save
     assert_equal [1], c.issue_ids.sort
   end
 
   def test_ref_keywords_allow_brackets_around_a_issue_number
     Setting.commit_ref_keywords = '*'
-
     c = Changeset.new(:repository   => Project.find(1).repository,
                       :committed_on => Time.now,
-                      :comments     => '[#1] Worked on this issue')
-    c.scan_comment_for_issue_ids
-
+                      :comments     => '[#1] Worked on this issue',
+                      :revision     => '12345')
+    assert c.save
     assert_equal [1], c.issue_ids.sort
   end
 
   def test_ref_keywords_allow_brackets_around_multiple_issue_numbers
     Setting.commit_ref_keywords = '*'
-
     c = Changeset.new(:repository   => Project.find(1).repository,
                       :committed_on => Time.now,
-                      :comments     => '[#1 #2, #3] Worked on these')
-    c.scan_comment_for_issue_ids
-
+                      :comments     => '[#1 #2, #3] Worked on these',
+                      :revision     => '12345')
+    assert c.save
     assert_equal [1,2,3], c.issue_ids.sort
   end
 
   def test_commit_referencing_a_subproject_issue
     c = Changeset.new(:repository   => Project.find(1).repository,
                       :committed_on => Time.now,
-                      :comments     => 'refs #5, a subproject issue')
-    c.scan_comment_for_issue_ids
-
+                      :comments     => 'refs #5, a subproject issue',
+                      :revision     => '12345')
+    assert c.save
     assert_equal [5], c.issue_ids.sort
     assert c.issues.first.project != c.project
   end
@@ -188,12 +183,11 @@ class ChangesetTest < ActiveSupport::TestCase
     r = Repository::Subversion.create!(
           :project => Project.find(3),
           :url     => 'svn://localhost/test')
-
     c = Changeset.new(:repository   => r,
                       :committed_on => Time.now,
-                      :comments     => 'refs #2, an issue of a parent project')
-    c.scan_comment_for_issue_ids
-
+                      :comments     => 'refs #2, an issue of a parent project',
+                      :revision     => '12345')
+    assert c.save
     assert_equal [2], c.issue_ids.sort
     assert c.issues.first.project != c.project
   end
