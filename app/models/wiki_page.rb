@@ -45,6 +45,7 @@ class WikiPage < ActiveRecord::Base
   validate :validate_parent_title
   before_destroy :remove_redirects
   before_save :handle_redirects
+  after_initialize :protect_page
 
   # eager load information about last updates, without loading text
   scope :with_updated_on, {
@@ -55,7 +56,7 @@ class WikiPage < ActiveRecord::Base
   # Wiki pages that are protected by default
   DEFAULT_PROTECTED_PAGES = %w(sidebar)
 
-  def after_initialize
+  def protect_page
     if new_record? && DEFAULT_PROTECTED_PAGES.include?(title.to_s.downcase)
       self.protected = true
     end
