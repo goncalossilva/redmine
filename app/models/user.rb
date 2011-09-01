@@ -74,8 +74,8 @@ class User < Principal
   validate :validate_password_length
   validates_inclusion_of :mail_notification, :in => MAIL_NOTIFICATION_OPTIONS.collect(&:first), :allow_blank => true
 
-  before_save :update_hashed_password
   before_create :set_mail_notification
+  before_save   :update_hashed_password
   before_destroy :remove_references_before_destroy
 
   scope :in_group, lambda {|group|

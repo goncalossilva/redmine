@@ -29,7 +29,6 @@ class Repository < ActiveRecord::Base
   # Raw SQL to delete changesets and changes in the database
   # has_many :changesets, :dependent => :destroy is too slow for big repositories
   before_destroy :clear_changesets
-  before_save :strip_urls
 
   validates_length_of :password, :maximum => 255, :allow_nil => true
   # Checks if the SCM is enabled when creating a repository
@@ -312,13 +311,6 @@ class Repository < ActiveRecord::Base
   end
 
   private
-
-  def strip_urls
-    # Strips url and root_url
-    url.strip!
-    root_url.strip!
-    true
-  end
 
   def clear_changesets
     cs, ch, ci = Changeset.table_name, Change.table_name, "#{table_name_prefix}changesets_issues#{table_name_suffix}"
