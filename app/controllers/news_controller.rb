@@ -48,7 +48,7 @@ class NewsController < ApplicationController
 
     respond_to do |format|
       format.html { render :layout => false if request.xhr? }
-      format.api
+#      format.api
       format.atom { render_feed(@newss, :title => (@project ? @project.name : Setting.app_title) + ": #{l(:label_news_plural)}") }
     end
   end
