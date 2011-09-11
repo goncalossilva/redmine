@@ -23,6 +23,8 @@ class RepositoryGitTest < ActiveSupport::TestCase
   REPOSITORY_PATH = Rails.root.join('tmp/test/git_repository').to_s
   REPOSITORY_PATH.gsub!(/\//, "\\") if Redmine::Platform.mswin?
 
+  NUM_REV = 21
+
   FELIX_HEX  = "Felix Sch\xC3\xA4fer"
   CHAR_1_HEX = "\xc3\x9c"
 
@@ -64,10 +66,11 @@ class RepositoryGitTest < ActiveSupport::TestCase
     def test_fetch_changesets_from_scratch
       assert_nil @repository.extra_info
 
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
 
-      assert_equal 21, @repository.changesets.count
+      assert_equal NUM_REV, @repository.changesets.count
       assert_equal 33, @repository.changes.count
 
       commit = @repository.changesets.find(:first, :order => 'committed_on ASC')
@@ -88,9 +91,10 @@ class RepositoryGitTest < ActiveSupport::TestCase
     end
 
     def test_fetch_changesets_incremental
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
-      assert_equal 21, @repository.changesets.count
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       assert_equal 33, @repository.changes.count
       extra_info_db = @repository.extra_info["branches"]
       assert_equal 4, extra_info_db.size
@@ -110,7 +114,7 @@ class RepositoryGitTest < ActiveSupport::TestCase
       @repository.changesets.each do |rev|
         rev.destroy if del_revs.detect {|r| r == rev.scmid.to_s }
       end
-      @repository.reload
+      @project.reload
       cs1 = @repository.changesets
       assert_equal 15, cs1.count
       h = @repository.extra_info.dup
@@ -118,20 +122,21 @@ class RepositoryGitTest < ActiveSupport::TestCase
             "4a07fe31bffcf2888791f3e6cbc9c4545cefe3e8"
       @repository.merge_extra_info(h)
       @repository.save
-      @repository.reload
+      @project.reload
       extra_info_db_1 = @repository.extra_info["branches"]
       assert_equal "4a07fe31bffcf2888791f3e6cbc9c4545cefe3e8",
                     extra_info_db_1["master"]["last_scmid"]
 
       @repository.fetch_changesets
-      assert_equal 21, @repository.changesets.count
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
     end
 
     def test_fetch_changesets_invalid_rev
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
-      assert_equal 21, @repository.changesets.count
-      assert_equal 33, @repository.changes.count
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       extra_info_db = @repository.extra_info["branches"]
       assert_equal 4, extra_info_db.size
       assert_equal "1ca7f5ed374f3cb31a93ae5215c2e25cc6ec5127",
@@ -150,7 +155,7 @@ class RepositoryGitTest < ActiveSupport::TestCase
       @repository.changesets.each do |rev|
         rev.destroy if del_revs.detect {|r| r == rev.scmid.to_s }
       end
-      @repository.reload
+      @project.reload
       cs1 = @repository.changesets
       assert_equal 15, cs1.count
       h = @repository.extra_info.dup
@@ -158,34 +163,37 @@ class RepositoryGitTest < ActiveSupport::TestCase
             "abcd1234efgh"
       @repository.merge_extra_info(h)
       @repository.save
-      @repository.reload
+      @project.reload
       extra_info_db_1 = @repository.extra_info["branches"]
       assert_equal "abcd1234efgh",
                     extra_info_db_1["master"]["last_scmid"]
 
       @repository.fetch_changesets
+      @project.reload
       assert_equal 15, @repository.changesets.count
     end
 
     def test_db_consistent_ordering_init
       assert_nil @repository.extra_info
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
       assert_equal 1, @repository.extra_info["db_consistent"]["ordering"]
     end
 
     def test_db_consistent_ordering_before_1_2
       assert_nil @repository.extra_info
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
-      assert_equal 21, @repository.changesets.count
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       assert_not_nil @repository.extra_info
       @repository.write_attribute(:extra_info, nil)
       @repository.save
       assert_nil @repository.extra_info
-      assert_equal 21, @repository.changesets.count
+      assert_equal NUM_REV, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
       assert_equal 0, @repository.extra_info["db_consistent"]["ordering"]
 
       del_revs = [
@@ -208,13 +216,13 @@ class RepositoryGitTest < ActiveSupport::TestCase
             "4a07fe31bffcf2888791f3e6cbc9c4545cefe3e8"
       @repository.merge_extra_info(h)
       @repository.save
-      @repository.reload
+      @project.reload
       extra_info_db_1 = @repository.extra_info["branches"]
       assert_equal "4a07fe31bffcf2888791f3e6cbc9c4545cefe3e8",
                     extra_info_db_1["master"]["last_scmid"]
 
       @repository.fetch_changesets
-      assert_equal 21, @repository.changesets.count
+      assert_equal NUM_REV, @repository.changesets.count
       assert_equal 0, @repository.extra_info["db_consistent"]["ordering"]
     end
 

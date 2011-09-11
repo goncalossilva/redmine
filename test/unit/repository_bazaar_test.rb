@@ -22,6 +22,7 @@ class RepositoryBazaarTest < ActiveSupport::TestCase
 
   REPOSITORY_PATH = Rails.root.join('tmp/test/bazaar_repository/trunk').to_s
   REPOSITORY_PATH.gsub!(/\/+/, '/')
+  NUM_REV = 4
 
   def setup
     @project = Project.find(3)
@@ -33,23 +34,28 @@ class RepositoryBazaarTest < ActiveSupport::TestCase
 
   if File.directory?(REPOSITORY_PATH)
     def test_fetch_changesets_from_scratch
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
 
-      assert_equal 4, @repository.changesets.count
+      assert_equal NUM_REV, @repository.changesets.count
       assert_equal 9, @repository.changes.count
       assert_equal 'Initial import', @repository.changesets.find_by_revision('1').comments
     end
 
     def test_fetch_changesets_incremental
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       # Remove changesets with revision > 5
       @repository.changesets.find(:all).each {|c| c.destroy if c.revision.to_i > 2}
-      @repository.reload
+      @project.reload
       assert_equal 2, @repository.changesets.count
 
       @repository.fetch_changesets
-      assert_equal 4, @repository.changesets.count
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
     end
 
     def test_entries
