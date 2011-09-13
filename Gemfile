@@ -24,6 +24,8 @@ gem 'json'
 # gem 'jquery-rails'
 # gem 'prototype-rails'
 
+gem 'therubyracer'
+
 # TODO rails-3.1: review the core changes to awesome_nested_set and decide on actions
 gem 'awesome_nested_set'
 # TODO rails-3.1: review the core changes to open_id_authentication and decide on actions
