@@ -6,6 +6,8 @@ source :gemcutter
 # gem 'bundler', '~> 1.0.0'
 gem 'rails', '3.0.9'
 
+gem 'dynamic_form'
+
 # gem 'rubytree', '0.5.2', :require => 'tree'
 gem 'rubytree', '0.7.0'
 # gem 'rack' , '~> 1.1.1'
