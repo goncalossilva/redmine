@@ -52,9 +52,12 @@ class RepositoryCvsTest < ActiveSupport::TestCase
     def test_fetch_changesets_incremental
       assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
+      @project.reload
+      assert_equal CHANGESETS_NUM, @repository.changesets.count
+
       # Remove changesets with revision > 3
       @repository.changesets.find(:all).each {|c| c.destroy if c.revision.to_i > 3}
-      @repository.reload
+      @project.reload
       assert_equal 3, @repository.changesets.count
       assert_equal %w|3 2 1|, @repository.changesets.collect(&:revision)
 
@@ -68,7 +71,11 @@ class RepositoryCvsTest < ActiveSupport::TestCase
       assert_equal rev3_committed_on, latest_rev.committed_on
 
       @repository.fetch_changesets
-      @repository.reload
+      if ::Rails::VERSION::MAJOR > 3
+        @project.reload
+      else
+        @repository.reload
+      end
       assert_equal CHANGESETS_NUM, @repository.changesets.count
 
       assert_equal %w|7 6 5 4 3 2 1|, @repository.changesets.collect(&:revision)
