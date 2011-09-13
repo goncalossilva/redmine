@@ -6,6 +6,8 @@ source :gemcutter
 # gem 'bundler', '~> 1.0.0'
 gem 'rails', '3.1.0'
 
+gem 'dynamic_form'
+
 # gem 'rubytree', '0.5.2', :require => 'tree'
 gem 'rubytree', '0.7.0'
 # gem 'rack' , '~> 1.1.1'
@@ -16,8 +18,28 @@ gem "fastercsv", "~> 1.5.0", :platforms => [:mri_18, :jruby, :mingw_18]
 
 # gem 'ruby-prof', :git => 'http://github.com/wycats/ruby-prof.git'
 gem 'ruby-prof'
+
+gem 'json'
+
 # gem 'jquery-rails'
 # gem 'prototype-rails'
+# gem 'prototype-rails', :git => "https://github.com/rails/prototype-rails.git"
+gem 'prototype-rails'
+
+gem 'therubyracer'
+
+# Gems used only for assets and not required
+# in production environments by default.
+group :assets do
+  gem 'sass-rails', "  ~> 3.1.0"
+  gem 'coffee-rails', "~> 3.1.0"
+  gem 'uglifier'
+end
+
+# TODO rails-3.1: review the core changes to awesome_nested_set and decide on actions
+gem 'awesome_nested_set'
+# TODO rails-3.1: review the core changes to open_id_authentication and decide on actions
+gem 'open_id_authentication'
 
 group :development do
 end

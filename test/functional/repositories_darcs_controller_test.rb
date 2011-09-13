@@ -27,6 +27,7 @@ class RepositoriesDarcsControllerTest < ActionController::TestCase
 
   REPOSITORY_PATH = Rails.root.join('tmp/test/darcs_repository').to_s
   PRJ_ID = 3
+  NUM_REV = 6
 
   def setup
     @controller = RepositoriesController.new
@@ -44,8 +45,10 @@ class RepositoriesDarcsControllerTest < ActionController::TestCase
 
   if File.directory?(REPOSITORY_PATH)
     def test_browse_root
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       get :show, :id => PRJ_ID
       assert_response :success
       assert_template 'show'
@@ -57,8 +60,10 @@ class RepositoriesDarcsControllerTest < ActionController::TestCase
     end
 
     def test_browse_directory
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       get :show, :id => PRJ_ID, :path => ['images']
       assert_response :success
       assert_template 'show'
@@ -71,8 +76,10 @@ class RepositoriesDarcsControllerTest < ActionController::TestCase
     end
 
     def test_browse_at_given_revision
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       get :show, :id => PRJ_ID, :path => ['images'], :rev => 1
       assert_response :success
       assert_template 'show'
@@ -81,8 +88,10 @@ class RepositoriesDarcsControllerTest < ActionController::TestCase
     end
 
     def test_changes
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       get :changes, :id => PRJ_ID, :path => ['images', 'edit.png']
       assert_response :success
       assert_template 'changes'
@@ -90,8 +99,10 @@ class RepositoriesDarcsControllerTest < ActionController::TestCase
     end
 
     def test_diff
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       # Full diff of changeset 5
       ['inline', 'sbs'].each do |dt|
         get :diff, :id => PRJ_ID, :rev => 5, :type => dt
@@ -108,9 +119,10 @@ class RepositoriesDarcsControllerTest < ActionController::TestCase
 
     def test_destroy_valid_repository
       @request.session[:user_id] = 1 # admin
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
-      assert @repository.changesets.count > 0
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
 
       get :destroy, :id => PRJ_ID
       assert_response 302
@@ -120,9 +132,10 @@ class RepositoriesDarcsControllerTest < ActionController::TestCase
 
     def test_destroy_invalid_repository
       @request.session[:user_id] = 1 # admin
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
-      assert @repository.changesets.count > 0
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
 
       get :destroy, :id => PRJ_ID
       assert_response 302
@@ -136,7 +149,7 @@ class RepositoriesDarcsControllerTest < ActionController::TestCase
                         )
       assert @repository
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
       assert_equal 0, @repository.changesets.count
 
       get :destroy, :id => PRJ_ID
