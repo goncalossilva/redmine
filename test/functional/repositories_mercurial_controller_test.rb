@@ -28,6 +28,7 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
   REPOSITORY_PATH = Rails.root.join('tmp/test/mercurial_repository').to_s
   CHAR_1_HEX = "\xc3\x9c"
   PRJ_ID     = 3
+  NUM_REV    = 29
 
   ruby19_non_utf8_pass =
      (RUBY_VERSION >= '1.9' && Encoding.default_external.to_s != 'UTF-8')
@@ -64,8 +65,10 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
     def test_fake; assert true end
   elsif File.directory?(REPOSITORY_PATH)
     def test_show_root
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       get :show, :id => PRJ_ID
       assert_response :success
       assert_template 'show'
@@ -79,8 +82,10 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
     end
 
     def test_show_directory
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       get :show, :id => PRJ_ID, :path => ['images']
       assert_response :success
       assert_template 'show'
@@ -95,8 +100,10 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
     end
 
     def test_show_at_given_revision
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       [0, '0', '0885933ad4f6'].each do |r1|
         get :show, :id => PRJ_ID, :path => ['images'], :rev => r1
         assert_response :success
@@ -109,8 +116,10 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
     end
 
     def test_show_directory_sql_escape_percent
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       [13, '13', '3a330eb32958'].each do |r1|
         get :show, :id => PRJ_ID, :path => ['sql_escape', 'percent%dir'],
             :rev => r1
@@ -128,8 +137,10 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
     end
 
     def test_show_directory_latin_1_path
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       [21, '21', 'adf805632193'].each do |r1|
         get :show, :id => PRJ_ID, :path => ['latin-1-dir'], :rev => r1
         assert_response :success
@@ -147,8 +158,10 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
     end
 
     def test_show_branch
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
        [
           'default',
           @branch_char_1,
@@ -168,8 +181,10 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
     end
 
     def test_show_tag
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
        [
         @tag_char_1,
         'tag_test.00',
@@ -256,8 +271,10 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
     end
 
     def test_diff
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       [4, '4', 'def6d2f1254a'].each do |r1|
         # Full diff of changeset 4
         ['inline', 'sbs'].each do |dt|
@@ -278,8 +295,10 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
     end
 
     def test_diff_two_revs
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       [2, '400bb8672109', '400', 400].each do |r1|
         [4, 'def6d2f1254a'].each do |r2|
           ['inline', 'sbs'].each do |dt|
@@ -355,9 +374,10 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
     end
 
     def test_annotate_not_in_tip
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
-      assert @repository.changesets.size > 0
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
 
       get :annotate, :id => PRJ_ID,
           :path => ['sources', 'welcome_controller.rb']
@@ -366,8 +386,10 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
     end
 
     def test_annotate_at_given_revision
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       [2, '400bb8672109', '400', 400].each do |r1|
         get :annotate, :id => PRJ_ID, :rev => r1,
             :path => ['sources', 'watchers_controller.rb']
@@ -425,8 +447,10 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
     end
 
     def test_empty_revision
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       ['', ' ', nil].each do |r|
         get :revision, :id => PRJ_ID, :rev => r
         assert_response 404
@@ -436,9 +460,10 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
 
     def test_destroy_valid_repository
       @request.session[:user_id] = 1 # admin
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
-      assert @repository.changesets.count > 0
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
 
       get :destroy, :id => PRJ_ID
       assert_response 302
@@ -448,9 +473,10 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
 
     def test_destroy_invalid_repository
       @request.session[:user_id] = 1 # admin
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
-      assert @repository.changesets.count > 0
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
 
       get :destroy, :id => PRJ_ID
       assert_response 302
@@ -464,7 +490,7 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
                       )
       assert @repository
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
       assert_equal 0, @repository.changesets.count
 
       get :destroy, :id => PRJ_ID
