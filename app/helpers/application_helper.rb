@@ -222,6 +222,7 @@ module ApplicationHelper
   end
 
   # Renders the project quick-jump box
+  # FIXME: should be a partial
   def render_project_jump_box
     return unless User.current.logged?
     projects = User.current.memberships.collect(&:project).compact.uniq
@@ -400,9 +401,8 @@ module ApplicationHelper
   end
 
   def other_formats_links(&block)
-    concat('<p class="other-formats">' + l(:label_export_to))
-    yield Redmine::Views::OtherFormatsBuilder.new(self)
-    concat('</p>')
+    html = yield Redmine::Views::OtherFormatsBuilder.new(self)
+    "<p class='other-formats'>#{l(:label_export_to)} #{html}</p>".html_safe
   end
 
   def page_header_title
@@ -446,8 +446,8 @@ module ApplicationHelper
       css << 'theme-' + theme.name
     end
 
-    css << 'controller-' + params[:controller]
-    css << 'action-' + params[:action]
+    css << 'controller-' + (params[:controller] || "")
+    css << 'action-' + (params[:action] || "")
     css.join(' ')
   end
 
@@ -783,7 +783,7 @@ module ApplicationHelper
   def labelled_tabular_form_for(name, object, options, &proc)
     options[:html] ||= {}
     options[:html][:class] = 'tabular' unless options[:html].has_key?(:class)
-    form_for(name, object, options.merge({ :builder => TabularFormBuilder, :lang => current_language}), &proc)
+    form_for(object, options.merge({ :builder => TabularFormBuilder, :lang => current_language, :as => name}), &proc)
   end
 
   def back_url_hidden_field_tag

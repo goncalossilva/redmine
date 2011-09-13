@@ -43,9 +43,12 @@ class WikiPage < ActiveRecord::Base
   validates_associated :content
 
   validate :validate_parent_title
+  before_destroy :remove_redirects
+  before_save :handle_redirects
+  after_initialize :protect_page
 
   # eager load information about last updates, without loading text
-  named_scope :with_updated_on, {
+  scope :with_updated_on, {
     :select => "#{WikiPage.table_name}.*, #{WikiContent.table_name}.updated_on",
     :joins => "LEFT JOIN #{WikiContent.table_name} ON #{WikiContent.table_name}.page_id = #{WikiPage.table_name}.id"
   }
@@ -53,7 +56,7 @@ class WikiPage < ActiveRecord::Base
   # Wiki pages that are protected by default
   DEFAULT_PROTECTED_PAGES = %w(sidebar)
 
-  def after_initialize
+  def protect_page
     if new_record? && DEFAULT_PROTECTED_PAGES.include?(title.to_s.downcase)
       self.protected = true
     end
@@ -69,7 +72,7 @@ class WikiPage < ActiveRecord::Base
     write_attribute(:title, value)
   end
 
-  def before_save
+  def handle_redirects
     self.title = Wiki.titleize(title)
     # Manage redirects if the title has changed
     if !@previous_title.blank? && (@previous_title != title) && !new_record?
@@ -86,7 +89,7 @@ class WikiPage < ActiveRecord::Base
     end
   end
 
-  def before_destroy
+  def remove_redirects
     # Remove redirects to this page
     wiki.redirects.find_all_by_redirects_to(title).each(&:destroy)
   end

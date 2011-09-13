@@ -17,5 +17,5 @@ module PrependEngineViews
   end
 end
 
-Rails::Plugin::Loader.send :include, PrependEngineViews
+#Rails::Plugin::Loader.send :include, PrependEngineViews
 

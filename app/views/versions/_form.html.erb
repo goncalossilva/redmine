@@ -1,5 +1,5 @@
 <%= back_url_hidden_field_tag %>
-<%= error_messages_for 'version' %>
+<%= error_messages_for %> <!-- FIXME: missing 'version' -->
 
 <div class="box">
 <p><%= f.text_field :name, :size => 60, :required => true %></p>

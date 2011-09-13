@@ -43,7 +43,8 @@
     </p>
 <% end %>
 
-<%= error_messages_for 'query' %>
+<!-- 'query' should be down there, this is a hack -->
+<%= error_messages_for %> <!-- FIXME: missing 'query' -->
 <% if @query.valid? %>
 <% if @issues.empty? %>
 <p class="nodata"><%= l(:label_no_data) %></p>
@@ -52,10 +53,10 @@
 <p class="pagination"><%= pagination_links_full @issue_pages, @issue_count %></p>
 <% end %>
 
-<% other_formats_links do |f| %>
-	<%= f.link_to 'Atom', :url => params.merge(:key => User.current.rss_key) %>
-	<%= f.link_to 'CSV', :url => params %>
-	<%= f.link_to 'PDF', :url => params %>
+<%= other_formats_links do |f| %>
+	<% f.link_to 'Atom', :url => params.merge(:key => User.current.rss_key) %>
+	<% f.link_to 'CSV', :url => params %>
+	<% f.link_to 'PDF', :url => params %>
 <% end %>
 
 <% end %>

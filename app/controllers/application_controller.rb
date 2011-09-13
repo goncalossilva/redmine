@@ -24,7 +24,7 @@ class ApplicationController < ActionController::Base
   include Redmine::I18n
 
   layout 'base'
-  exempt_from_layout 'builder', 'rsb'
+  # exempt_from_layout 'builder', 'rsb'
 
   protect_from_forgery
   def handle_unverified_request
@@ -44,7 +44,7 @@ class ApplicationController < ActionController::Base
   end
 
   before_filter :user_setup, :check_if_login_required, :set_localization
-  filter_parameter_logging :password
+  # filter_parameter_logging :password
 
   rescue_from ActionController::InvalidAuthenticityToken, :with => :invalid_authenticity_token
   rescue_from ::Unauthorized, :with => :deny_access
@@ -326,7 +326,7 @@ class ApplicationController < ActionController::Base
     if api_request?
       logger.error "Form authenticity token is missing or is invalid. API calls must include a proper Content-type header (text/xml or text/json)."
     end
-    render_error "Invalid form authenticity token."
+    render_error "Invalid form authenticity token.".html_safe
   end
 
   def render_feed(items, options={})

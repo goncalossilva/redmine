@@ -26,8 +26,8 @@ class Role < ActiveRecord::Base
     ['own', :label_issues_visibility_own]
   ]
 
-  named_scope :givable, { :conditions => "builtin = 0", :order => 'position' }
-  named_scope :builtin, lambda { |*args|
+  scope :givable, { :conditions => "builtin = 0", :order => 'position' }
+  scope :builtin, lambda { |*args|
     compare = 'not' if args.first == true
     { :conditions => "#{compare} builtin = 0" }
   }
@@ -104,6 +104,10 @@ class Role < ActiveRecord::Base
   # Return true if the role is a builtin role
   def builtin?
     self.builtin != 0
+  end
+
+  def builtin_for_db_migrate(perms)
+    write_attribute(:builtin, perms)
   end
 
   # Return true if the role is a project member role
