@@ -23,6 +23,8 @@ gem 'json'
 
 # gem 'jquery-rails'
 # gem 'prototype-rails'
+# gem 'prototype-rails', :git => "https://github.com/rails/prototype-rails.git"
+gem 'prototype-rails'
 
 gem 'therubyracer'
 
