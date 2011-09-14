@@ -207,7 +207,7 @@ class RepositoryGitTest < ActiveSupport::TestCase
       @repository.changesets.each do |rev|
         rev.destroy if del_revs.detect {|r| r == rev.scmid.to_s }
       end
-      @repository.reload
+      @project.reload
       cs1 = @repository.changesets
       assert_equal 15, cs1.count
       assert_equal 0, @repository.extra_info["db_consistent"]["ordering"]
@@ -227,8 +227,10 @@ class RepositoryGitTest < ActiveSupport::TestCase
     end
 
     def test_latest_changesets
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       # with limit
       changesets = @repository.latest_changesets('', nil, 2)
       assert_equal 2, changesets.size
@@ -348,8 +350,10 @@ class RepositoryGitTest < ActiveSupport::TestCase
       elsif JRUBY_SKIP
         puts JRUBY_SKIP_STR
       else
+        assert_equal 0, @repository.changesets.count
         @repository.fetch_changesets
-        @repository.reload
+        @project.reload
+        assert_equal NUM_REV, @repository.changesets.count
         changesets = @repository.latest_changesets(
                     "latin-1-dir/test-#{@char_1}-subdir", '1ca7f5ed')
         assert_equal [
@@ -359,8 +363,10 @@ class RepositoryGitTest < ActiveSupport::TestCase
     end
 
     def test_find_changeset_by_name
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       ['7234cb2750b63f47bff735edc50a1c0a433c2518', '7234cb2750b'].each do |r|
         assert_equal '7234cb2750b63f47bff735edc50a1c0a433c2518',
                      @repository.find_changeset_by_name(r).revision
@@ -368,24 +374,30 @@ class RepositoryGitTest < ActiveSupport::TestCase
     end
 
     def test_find_changeset_by_empty_name
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       ['', ' ', nil].each do |r|
         assert_nil @repository.find_changeset_by_name(r)
       end
     end
 
     def test_identifier
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       c = @repository.changesets.find_by_revision(
                           '7234cb2750b63f47bff735edc50a1c0a433c2518')
       assert_equal c.scmid, c.identifier
     end
 
     def test_format_identifier
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       c = @repository.changesets.find_by_revision(
                           '7234cb2750b63f47bff735edc50a1c0a433c2518')
       assert_equal '7234cb27', c.format_identifier
@@ -402,8 +414,10 @@ class RepositoryGitTest < ActiveSupport::TestCase
     end
 
     def test_log_utf8
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       str_felix_hex  = FELIX_HEX.dup
       if str_felix_hex.respond_to?(:force_encoding)
           str_felix_hex.force_encoding('UTF-8')
@@ -414,8 +428,10 @@ class RepositoryGitTest < ActiveSupport::TestCase
     end
 
     def test_previous
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       %w|1ca7f5ed374f3cb31a93ae5215c2e25cc6ec5127 1ca7f5ed|.each do |r1|
         changeset = @repository.find_changeset_by_name(r1)
         %w|64f1f3e89ad1cb57976ff0ad99a107012ba3481d 64f1f3e89ad1|.each do |r2|
@@ -425,8 +441,10 @@ class RepositoryGitTest < ActiveSupport::TestCase
     end
 
     def test_previous_nil
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       %w|7234cb2750b63f47bff735edc50a1c0a433c2518 7234cb2|.each do |r1|
         changeset = @repository.find_changeset_by_name(r1)
         assert_nil changeset.previous
@@ -434,8 +452,10 @@ class RepositoryGitTest < ActiveSupport::TestCase
     end
 
     def test_next
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       %w|64f1f3e89ad1cb57976ff0ad99a107012ba3481d 64f1f3e89ad1|.each do |r2|
         changeset = @repository.find_changeset_by_name(r2)
         %w|1ca7f5ed374f3cb31a93ae5215c2e25cc6ec5127 1ca7f5ed|.each do |r1|
@@ -445,8 +465,10 @@ class RepositoryGitTest < ActiveSupport::TestCase
     end
 
     def test_next_nil
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       %w|67e7792ce20ccae2e4bb73eed09bb397819c8834 67e7792ce20cca|.each do |r1|
         changeset = @repository.find_changeset_by_name(r1)
         assert_nil changeset.next

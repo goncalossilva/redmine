@@ -2,4 +2,13 @@
 
 Redmine is a flexible project management web application written using Ruby on Rails framework.
 
-More details can be found at in the doc directory or on the official website http://www.redmine.org
+More details can be found at http://www.redmine.org
+
+This fork is supposed to be Rails 3 compatible.
+
+Currently not working:
+- Some tests;
+- The error_messages_for call doesn't work, there seems to be an issue with dynamic_form;
+- Mail notifications. The message is built, but calling deliver raises exceptions so it's disabled (Mailer needs to be rewritten);
+- Custom fields validations is not working properly (Query needs to be rewritten);
+
