@@ -60,7 +60,7 @@
     <fieldset><legend><%=l(:label_member_new)%></legend>
 
     <p><%= label_tag "principal_search", l(:label_principal_search) %><%= text_field_tag 'principal_search', nil %></p>
-    <%= observe_field(:principal_search,
+    <%#= observe_field(:principal_search,
                  :frequency => 0.5,
                  :update => :principals,
                  :url => { :controller => 'members', :action => 'autocomplete_for_member', :id => @project },
