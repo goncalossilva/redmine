@@ -1,4 +1,4 @@
-<%= error_messages_for 'relation' %>
+<%= error_messages_for %> <!-- FIXME: missing 'relation' -->
 
 <p><%= f.select :relation_type, collection_for_relation_type_select, {}, :onchange => "setPredecessorFieldsVisibility();" %>
 <%= l(:label_issue) %> #<%= f.text_field :issue_to_id, :size => 10 %>

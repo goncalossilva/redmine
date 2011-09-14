@@ -92,6 +92,7 @@ class Query < ActiveRecord::Base
 
   validates_presence_of :name, :on => :save
   validates_length_of :name, :maximum => 255
+  validate :validate_query_filters
 
   @@operators = { "="   => :label_equals,
                   "!"   => :label_not_equals,
@@ -148,7 +149,7 @@ class Query < ActiveRecord::Base
   ]
   cattr_reader :available_columns
 
-  named_scope :visible, lambda {|*args|
+  scope :visible, lambda {|*args|
     user = args.shift || User.current
     base = Project.allowed_to_condition(user, :view_issues, *args)
     user_id = user.logged? ? user.id : 0
@@ -157,6 +158,10 @@ class Query < ActiveRecord::Base
       :include => :project
     }
   }
+
+  attr_accessor :subject, :created_on, :updated_on, :start_date, :due_date, :estimated_hours, :done_ratio
+
+  after_initialize :is_project_nil
 
   def initialize(attributes = nil)
     super attributes
@@ -168,7 +173,8 @@ class Query < ActiveRecord::Base
     @is_for_all = project.nil?
   end
 
-  def validate
+  # FIXME: not working as expected, this needs to be completely refactored for Rails 3
+  def validate_query_filters
     filters.each_key do |field|
       if values_for(field)
         case type_for(field)
@@ -222,7 +228,6 @@ class Query < ActiveRecord::Base
                            "due_date" => { :type => :date, :order => 12 },
                            "estimated_hours" => { :type => :float, :order => 13 },
                            "done_ratio" =>  { :type => :integer, :order => 14 }}
-
     principals = []
     if project
       principals += project.principals.sort
@@ -231,7 +236,6 @@ class Query < ActiveRecord::Base
       if all_projects.any?
         # members of visible projects
         principals += Principal.active.find(:all, :conditions => ["#{User.table_name}.id IN (SELECT DISTINCT user_id FROM members WHERE project_id IN (?))", all_projects.collect(&:id)]).sort
-
         # project filter
         project_values = []
         Project.project_tree(all_projects) do |p, level|
@@ -348,11 +352,11 @@ class Query < ActiveRecord::Base
 
   def available_columns
     return @available_columns if @available_columns
-    @available_columns = Query.available_columns
-    @available_columns += (project ?
-                            project.all_issue_custom_fields :
-                            IssueCustomField.find(:all)
-                           ).collect {|cf| QueryCustomFieldColumn.new(cf) }
+    print "BLOW"
+    @available_columns = @@available_columns
+    #@available_columns += (IssueCustomField.find(:all)
+    #                       ).collect {|cf| QueryCustomFieldColumn.new(cf)}
+    puts "BLOW2"
   end
 
   def self.available_columns=(v)
@@ -370,6 +374,7 @@ class Query < ActiveRecord::Base
 
   # Returns a Hash of columns and the key for sorting
   def sortable_columns
+    puts available_columns
     {'id' => "#{Issue.table_name}.id"}.merge(available_columns.inject({}) {|h, column|
                                                h[column.name.to_s] = column.sortable
                                                h
@@ -496,7 +501,6 @@ class Query < ActiveRecord::Base
           end
         end
       end
-
       if field =~ /^cf_(\d+)$/
         # custom field
         filters_clauses << sql_for_custom_field(field, operator, v, $1)
@@ -548,7 +552,7 @@ class Query < ActiveRecord::Base
     order_option = [group_by_sort_order, options[:order]].reject {|s| s.blank?}.join(',')
     order_option = nil if order_option.blank?
 
-    Issue.visible.find :all, :include => ([:status, :project] + (options[:include] || [])).uniq,
+    Issue.find :all, :include => ([:status, :project] + (options[:include] || [])).uniq,
                      :conditions => Query.merge_conditions(statement, options[:conditions]),
                      :order => order_option,
                      :limit  => options[:limit],
@@ -572,7 +576,7 @@ class Query < ActiveRecord::Base
   # Returns the versions
   # Valid options are :conditions
   def versions(options={})
-    Version.visible.find :all, :include => :project,
+    Version.find :all, :include => :project,
                        :conditions => Query.merge_conditions(project_statement, options[:conditions])
   rescue ::ActiveRecord::StatementInvalid => e
     raise StatementInvalid.new(e.message)

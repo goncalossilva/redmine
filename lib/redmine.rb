@@ -25,6 +25,8 @@ else
   FCSV = CSV
 end
 
+require 'dynamic_form'
+
 Redmine::Scm::Base.add "Subversion"
 Redmine::Scm::Base.add "Darcs"
 Redmine::Scm::Base.add "Mercurial"

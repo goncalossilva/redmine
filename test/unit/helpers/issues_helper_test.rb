@@ -17,12 +17,51 @@
 
 require File.expand_path('../../../test_helper', __FILE__)
 
-class IssuesHelperTest < HelperTestCase
+class IssuesHelperTest < ActionView::TestCase
   include ApplicationHelper
   include IssuesHelper
 
-  include ActionController::Assertions::SelectorAssertions
-  fixtures :all
+  fixtures :attachments,
+           :auth_sources,
+           :boards,
+           :changes,
+           :changesets,
+           :comments,
+           :custom_fields,
+           :custom_fields_projects,
+           :custom_fields_trackers,
+           :custom_values,
+           :documents,
+           :enabled_modules,
+           :enumerations,
+           :groups_users,
+           :issue_categories,
+           :issue_relations,
+           :issue_statuses,
+           :issues,
+           :journal_details,
+           :journals,
+           :member_roles,
+           :members,
+           :messages,
+           :news,
+           :projects,
+           :projects_trackers,
+           :queries,
+           :repositories,
+           :roles,
+           :time_entries,
+           :tokens,
+           :trackers,
+           :user_preferences,
+           :users,
+           :versions,
+           :watchers,
+           :wiki_content_versions,
+           :wiki_contents,
+           :wiki_pages,
+           :wikis,
+           :workflows
 
   # Used by assert_select
   def html_document

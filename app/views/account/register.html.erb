@@ -1,7 +1,7 @@
 <h2><%=l(:label_register)%> <%=link_to l(:label_login_with_open_id_option), signin_url if Setting.openid? %></h2>
 
 <% form_tag({:action => 'register'}, :class => "tabular") do %>
-<%= error_messages_for 'user' %>
+<%= error_messages_for %> <!-- FIXME: missing user -->
 
 <div class="box">
 <!--[form:user]-->
@@ -24,7 +24,7 @@
 <%= text_field 'user', 'lastname'  %></p>
 
 <p><label for="user_mail"><%=l(:field_mail)%> <span class="required">*</span></label>
-<%= text_field 'user', 'mail'  %></p>
+<%= text_field( 'user', 'mail').html_safe %></p>
 
 <p><label for="user_language"><%=l(:field_language)%></label>
 <%= select("user", "language", lang_options_for_select) %></p>

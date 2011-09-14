@@ -27,7 +27,7 @@
 </p>
 <% end %>
 
-<%= error_messages_for 'query' %>
+<%= error_messages_for %> <!-- FIXME: missing 'query' -->
 <% if @query.valid? %>
 <% zoom = 1
 @gantt.zoom.times { zoom = zoom * 2 }
@@ -174,9 +174,9 @@ if Date.today >= @gantt.date_from and Date.today <= @gantt.date_to %>
 </tr>
 </table>
 
-<% other_formats_links do |f| %>
-	<%= f.link_to 'PDF', :url => params.merge(@gantt.params) %>
-	<%= f.link_to('PNG', :url => params.merge(@gantt.params)) if @gantt.respond_to?('to_image') %>
+<%= other_formats_links do |f| %>
+	<% f.link_to 'PDF', :url => params.merge(@gantt.params) %>
+	<% f.link_to('PNG', :url => params.merge(@gantt.params)) if @gantt.respond_to?('to_image') %>
 <% end %>
 <% end # query.valid? %>
 
