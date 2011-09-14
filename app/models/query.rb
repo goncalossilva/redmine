@@ -572,8 +572,7 @@ class Query < ActiveRecord::Base
   # Returns the versions
   # Valid options are :conditions
   def versions(options={})
-    Version.visible.find :all, :include => :project,
-                       :conditions => Query.merge_conditions(project_statement, options[:conditions])
+    Version.where(project_statement).where(options[:conditions]) # :include => :project,
   rescue ::ActiveRecord::StatementInvalid => e
     raise StatementInvalid.new(e.message)
   end
