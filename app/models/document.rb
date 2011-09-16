@@ -31,7 +31,7 @@ class Document < ActiveRecord::Base
 
   after_initialize :update_category
 
-  named_scope :visible, lambda {|*args| { :include => :project,
+  scope :visible, lambda {|*args| { :include => :project,
                                           :conditions => Project.allowed_to_condition(args.shift || User.current, :view_documents, *args) } }
 
   def visible?(user=User.current)

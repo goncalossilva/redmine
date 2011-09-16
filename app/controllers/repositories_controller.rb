@@ -30,7 +30,7 @@ class RepositoriesController < ApplicationController
   before_filter :find_repository, :except => :edit
   before_filter :find_project, :only => :edit
   before_filter :authorize
-  accept_key_auth :revisions
+  accept_rss_auth :revisions
 
   rescue_from Redmine::Scm::Adapters::CommandFailed, :with => :show_error_command_failed
 
@@ -207,7 +207,7 @@ class RepositoriesController < ApplicationController
         User.current.pref[:diff_type] = @diff_type
         User.current.preference.save
       end
-      @cache_key = "repositories/diff/#{@repository.id}/" + 
+      @cache_key = "repositories/diff/#{@repository.id}/" +
                       Digest::MD5.hexdigest("#{@path}-#{@rev}-#{@rev_to}-#{@diff_type}-#{current_language}")
       unless read_fragment(@cache_key)
         @diff = @repository.diff(@path, @rev, @rev_to)

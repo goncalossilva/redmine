@@ -25,6 +25,8 @@ else
   FCSV = CSV
 end
 
+require 'dynamic_form'
+
 Redmine::Scm::Base.add "Subversion"
 Redmine::Scm::Base.add "Darcs"
 Redmine::Scm::Base.add "Mercurial"
@@ -55,7 +57,7 @@ Redmine::AccessControl.map do |map|
   map.permission :manage_members, {:projects => :settings, :members => [:new, :edit, :destroy, :autocomplete_for_member]}, :require => :member
   map.permission :manage_versions, {:projects => :settings, :versions => [:new, :create, :edit, :update, :close_completed, :destroy]}, :require => :member
   map.permission :add_subprojects, {:projects => [:new, :create]}, :require => :member
-  
+
   map.project_module :issue_tracking do |map|
     # Issue categories
     map.permission :manage_categories, {:projects => :settings, :issue_categories => [:new, :edit, :destroy]}, :require => :member
@@ -69,7 +71,7 @@ Redmine::AccessControl.map do |map|
                                   :reports => [:issue_report, :issue_report_details]}
     map.permission :add_issues, {:issues => [:new, :create, :update_form]}
     map.permission :edit_issues, {:issues => [:edit, :update, :bulk_edit, :bulk_update, :update_form], :journals => [:new]}
-    map.permission :manage_issue_relations, {:issue_relations => [:new, :destroy]}
+    map.permission :manage_issue_relations, {:issue_relations => [:index, :show, :create, :destroy]}
     map.permission :manage_subtasks, {}
     map.permission :set_issues_private, {}
     map.permission :set_own_issues_private, {}, :require => :loggedin
@@ -86,7 +88,7 @@ Redmine::AccessControl.map do |map|
     map.permission :add_issue_watchers, {:watchers => :new}
     map.permission :delete_issue_watchers, {:watchers => :destroy}
   end
-  
+
   map.project_module :time_tracking do |map|
     map.permission :log_time, {:timelog => [:new, :create, :edit, :update, :bulk_edit, :bulk_update]}, :require => :loggedin
     map.permission :view_time_entries, :timelog => [:index, :show], :time_entry_reports => [:report]
@@ -94,7 +96,7 @@ Redmine::AccessControl.map do |map|
     map.permission :edit_own_time_entries, {:timelog => [:new, :create, :edit, :update, :destroy,:bulk_edit, :bulk_update]}, :require => :loggedin
     map.permission :manage_project_activities, {:project_enumerations => [:update, :destroy]}, :require => :member
   end
-  
+
   map.project_module :news do |map|
     map.permission :manage_news, {:news => [:new, :create, :edit, :update, :destroy], :comments => [:destroy]}, :require => :member
     map.permission :view_news, {:news => [:index, :show]}, :public => true
@@ -105,12 +107,12 @@ Redmine::AccessControl.map do |map|
     map.permission :manage_documents, {:documents => [:new, :edit, :destroy, :add_attachment]}, :require => :loggedin
     map.permission :view_documents, :documents => [:index, :show, :download]
   end
-  
+
   map.project_module :files do |map|
     map.permission :manage_files, {:files => [:new, :create]}, :require => :loggedin
     map.permission :view_files, :files => :index, :versions => :download
   end
-    
+
   map.project_module :wiki do |map|
     map.permission :manage_wiki, {:wikis => [:edit, :destroy]}, :require => :member
     map.permission :rename_wiki_pages, {:wiki => :rename}, :require => :member
@@ -122,7 +124,7 @@ Redmine::AccessControl.map do |map|
     map.permission :delete_wiki_pages_attachments, {}
     map.permission :protect_wiki_pages, {:wiki => :protect}, :require => :member
   end
-    
+
   map.project_module :repository do |map|
     map.permission :manage_repository, {:repositories => [:edit, :committers, :destroy]}, :require => :member
     map.permission :browse_repository, :repositories => [:show, :browse, :entry, :annotate, :changes, :diff, :stats, :graph]

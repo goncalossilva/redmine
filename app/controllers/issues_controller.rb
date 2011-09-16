@@ -27,7 +27,8 @@ class IssuesController < ApplicationController
   before_filter :find_optional_project, :only => [:index]
   before_filter :check_for_default_issue_status, :only => [:new, :create]
   before_filter :build_new_issue_from_params, :only => [:new, :create]
-  accept_key_auth :index, :show, :create, :update, :destroy
+  accept_rss_auth :index, :show
+  accept_api_auth :index, :show, :create, :update, :destroy
 
   rescue_from Query::StatementInvalid, :with => :query_statement_invalid
 
@@ -88,15 +89,20 @@ class IssuesController < ApplicationController
       @issue_count_by_group = @query.issue_count_by_group
 
       respond_to do |format|
-        format.html { render :template => 'issues/index.rhtml', :layout => !request.xhr? }
-        format.api
+        format.html { render :template => 'issues/index', :layout => !request.xhr? }
+        format.api  {
+          Issue.load_relations(@issues) if include_in_api_response?('relations')
+        }
         format.atom { render_feed(@issues, :title => "#{@project || Setting.app_title}: #{l(:label_issue_plural)}") }
         format.csv  { send_data(issues_to_csv(@issues, @project), :type => 'text/csv; header=present', :filename => 'export.csv') }
         format.pdf  { send_data(issues_to_pdf(@issues, @project, @query), :type => 'application/pdf', :filename => 'export.pdf') }
       end
     else
-      # Send html if the query is not valid
-      render(:template => 'issues/index.rhtml', :layout => !request.xhr?)
+      respond_to do |format|
+        format.html { render(:template => 'issues/index', :layout => !request.xhr?) }
+        format.any(:atom, :csv, :pdf) { render(:nothing => true) }
+        format.api { render_validation_errors(@query) }
+      end
     end
   rescue ActiveRecord::RecordNotFound
     render_404
@@ -118,7 +124,7 @@ class IssuesController < ApplicationController
     @priorities = IssuePriority.active
     @time_entry = TimeEntry.new(:issue => @issue, :project => @issue.project)
     respond_to do |format|
-      format.html { render :template => 'issues/show.rhtml' }
+      format.html { render :template => 'issues/show' }
       format.api
       format.atom { render :template => 'journals/index', :layout => false, :content_type => 'application/atom+xml' }
       format.pdf  { send_data(issue_to_pdf(@issue), :type => 'application/pdf', :filename => "#{@project.identifier}-#{@issue.id}.pdf") }
@@ -138,11 +144,11 @@ class IssuesController < ApplicationController
     call_hook(:controller_issues_new_before_save, { :params => params, :issue => @issue })
     if @issue.save
       attachments = Attachment.attach_files(@issue, params[:attachments])
-      render_attachment_warning_if_needed(@issue)
-      flash[:notice] = l(:notice_successful_create)
       call_hook(:controller_issues_new_after_save, { :params => params, :issue => @issue})
       respond_to do |format|
         format.html {
+          render_attachment_warning_if_needed(@issue)
+          flash[:notice] = l(:notice_issue_successful_create, :id => "<a href='#{issue_path(@issue)}'>##{@issue.id}</a>")
           redirect_to(params[:continue] ?  { :action => 'new', :project_id => @project, :issue => {:tracker_id => @issue.tracker, :parent_issue_id => @issue.parent_issue_id}.reject {|k,v| v.nil?} } :
                       { :action => 'show', :id => @issue })
         }

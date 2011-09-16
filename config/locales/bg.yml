@@ -69,11 +69,11 @@ bg:
         other: "почти %{count} години"
 
   number:
-    # Default format for numbers
     format:
       separator: "."
       delimiter: ""
       precision: 3
+
     human:
       format:
         precision: 1
@@ -88,7 +88,6 @@ bg:
           mb: "MB"
           gb: "GB"
           tb: "TB"
-
 
 # Used in array.to_sentence.
   support:
@@ -157,7 +156,7 @@ bg:
   notice_file_not_found: Несъществуваща или преместена страница.
   notice_locking_conflict: Друг потребител променя тези данни в момента.
   notice_not_authorized: Нямате право на достъп до тази страница.
-  notice_not_authorized_archived_project: Проектът, който се опитвате да видите е архивиран.
+  notice_not_authorized_archived_project: Проектът, който се опитвате да видите е архивиран. Ако смятате, че това не е правилно, обърнете се към администратора за разархивиране.
   notice_email_sent: "Изпратен e-mail на %{value}"
   notice_email_error: "Грешка при изпращане на e-mail (%{value})"
   notice_feeds_access_key_reseted: Вашия ключ за RSS достъп беше променен.
@@ -171,6 +170,7 @@ bg:
   notice_unable_delete_time_entry: Невъзможност за изтриване на запис на time log.
   notice_issue_done_ratios_updated: Обновен процент на завършените задачи.
   notice_gantt_chart_truncated: Мрежовият график е съкратен, понеже броят на обектите, които могат да бъдат показани е твърде голям (%{max})
+  notice_issue_successful_create: Задача %{id} е създадена.
   
   error_can_t_load_default_data: "Грешка при зареждане на примерната информация: %{value}"
   error_scm_not_found: Несъществуващ обект в хранилището.
@@ -373,6 +373,7 @@ bg:
   setting_commit_logtime_enabled: Разрешаване на отчитането на работното време
   setting_commit_logtime_activity_id: Дейност при отчитане на работното време
   setting_gantt_items_limit: Максимален брой обекти, които да се показват в мрежов график
+  setting_issue_group_assignment: Разрешено назначаването на задачи на групи
   
   permission_add_project: Създаване на проект
   permission_add_subprojects: Създаване на подпроекти
@@ -622,6 +623,7 @@ bg:
   label_in_more_than: след повече от
   label_greater_or_equal: ">="
   label_less_or_equal: <=
+  label_between: между
   label_in: в следващите
   label_today: днес
   label_all_time: всички
@@ -692,6 +694,7 @@ bg:
   label_statistics: Статистики
   label_commits_per_month: Ревизии по месеци
   label_commits_per_author: Ревизии по автор
+  label_diff: diff  
   label_view_diff: Виж разликите
   label_diff_inline: хоризонтално
   label_diff_side_by_side: вертикално

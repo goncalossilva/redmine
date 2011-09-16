@@ -28,6 +28,7 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
   REPOSITORY_PATH = Rails.root.join('tmp/test/mercurial_repository').to_s
   CHAR_1_HEX = "\xc3\x9c"
   PRJ_ID     = 3
+  NUM_REV    = 29
 
   ruby19_non_utf8_pass =
      (RUBY_VERSION >= '1.9' && Encoding.default_external.to_s != 'UTF-8')
@@ -37,8 +38,9 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
     @request    = ActionController::TestRequest.new
     @response   = ActionController::TestResponse.new
     User.current = nil
+    @project    = Project.find(PRJ_ID)
     @repository = Repository::Mercurial.create(
-                      :project => Project.find(PRJ_ID),
+                      :project => @project,
                       :url     => REPOSITORY_PATH,
                       :path_encoding => 'ISO-8859-1'
                       )
@@ -63,8 +65,10 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
     def test_fake; assert true end
   elsif File.directory?(REPOSITORY_PATH)
     def test_show_root
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       get :show, :id => PRJ_ID
       assert_response :success
       assert_template 'show'
@@ -74,12 +78,14 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
       assert assigns(:entries).detect {|e| e.name == 'sources' && e.kind == 'dir'}
       assert assigns(:entries).detect {|e| e.name == 'README'  && e.kind == 'file'}
       assert_not_nil assigns(:changesets)
-      assigns(:changesets).size > 0
+      assert assigns(:changesets).size > 0
     end
 
     def test_show_directory
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       get :show, :id => PRJ_ID, :path => ['images']
       assert_response :success
       assert_template 'show'
@@ -90,12 +96,14 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
       assert_equal 'file', entry.kind
       assert_equal 'images/edit.png', entry.path
       assert_not_nil assigns(:changesets)
-      assigns(:changesets).size > 0
+      assert assigns(:changesets).size > 0
     end
 
     def test_show_at_given_revision
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       [0, '0', '0885933ad4f6'].each do |r1|
         get :show, :id => PRJ_ID, :path => ['images'], :rev => r1
         assert_response :success
@@ -103,13 +111,15 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
         assert_not_nil assigns(:entries)
         assert_equal ['delete.png'], assigns(:entries).collect(&:name)
         assert_not_nil assigns(:changesets)
-        assigns(:changesets).size > 0
+        assert assigns(:changesets).size > 0
       end
     end
 
     def test_show_directory_sql_escape_percent
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       [13, '13', '3a330eb32958'].each do |r1|
         get :show, :id => PRJ_ID, :path => ['sql_escape', 'percent%dir'],
             :rev => r1
@@ -121,14 +131,16 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
                      assigns(:entries).collect(&:name)
         changesets = assigns(:changesets)
         assert_not_nil changesets
-        assigns(:changesets).size > 0
+        assert assigns(:changesets).size > 0
         assert_equal %w(13 11 10 9), changesets.collect(&:revision)
       end
     end
 
     def test_show_directory_latin_1_path
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       [21, '21', 'adf805632193'].each do |r1|
         get :show, :id => PRJ_ID, :path => ['latin-1-dir'], :rev => r1
         assert_response :success
@@ -146,8 +158,10 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
     end
 
     def test_show_branch
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
        [
           'default',
           @branch_char_1,
@@ -162,13 +176,15 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
         assert_not_nil assigns(:entries)
         assert assigns(:entries).size > 0
         assert_not_nil assigns(:changesets)
-        assigns(:changesets).size > 0
+        assert assigns(:changesets).size > 0
       end
     end
 
     def test_show_tag
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
        [
         @tag_char_1,
         'tag_test.00',
@@ -180,7 +196,7 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
         assert_not_nil assigns(:entries)
         assert assigns(:entries).size > 0
         assert_not_nil assigns(:changesets)
-        assigns(:changesets).size > 0
+        assert assigns(:changesets).size > 0
       end
     end
 
@@ -255,8 +271,10 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
     end
 
     def test_diff
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       [4, '4', 'def6d2f1254a'].each do |r1|
         # Full diff of changeset 4
         ['inline', 'sbs'].each do |dt|
@@ -277,8 +295,10 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
     end
 
     def test_diff_two_revs
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       [2, '400bb8672109', '400', 400].each do |r1|
         [4, 'def6d2f1254a'].each do |r2|
           ['inline', 'sbs'].each do |dt|
@@ -354,9 +374,10 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
     end
 
     def test_annotate_not_in_tip
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
-      assert @repository.changesets.size > 0
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
 
       get :annotate, :id => PRJ_ID,
           :path => ['sources', 'welcome_controller.rb']
@@ -365,8 +386,10 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
     end
 
     def test_annotate_at_given_revision
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       [2, '400bb8672109', '400', 400].each do |r1|
         get :annotate, :id => PRJ_ID, :rev => r1,
             :path => ['sources', 'watchers_controller.rb']
@@ -424,13 +447,56 @@ class RepositoriesMercurialControllerTest < ActionController::TestCase
     end
 
     def test_empty_revision
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       ['', ' ', nil].each do |r|
         get :revision, :id => PRJ_ID, :rev => r
         assert_response 404
         assert_error_tag :content => /was not found/
       end
+    end
+
+    def test_destroy_valid_repository
+      @request.session[:user_id] = 1 # admin
+      assert_equal 0, @repository.changesets.count
+      @repository.fetch_changesets
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
+
+      get :destroy, :id => PRJ_ID
+      assert_response 302
+      @project.reload
+      assert_nil @project.repository
+    end
+
+    def test_destroy_invalid_repository
+      @request.session[:user_id] = 1 # admin
+      assert_equal 0, @repository.changesets.count
+      @repository.fetch_changesets
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
+
+      get :destroy, :id => PRJ_ID
+      assert_response 302
+      @project.reload
+      assert_nil @project.repository
+
+      @repository = Repository::Mercurial.create(
+                      :project => Project.find(PRJ_ID),
+                      :url     => "/invalid",
+                      :path_encoding => 'ISO-8859-1'
+                      )
+      assert @repository
+      @repository.fetch_changesets
+      @project.reload
+      assert_equal 0, @repository.changesets.count
+
+      get :destroy, :id => PRJ_ID
+      assert_response 302
+      @project.reload
+      assert_nil @project.repository
     end
   else
     puts "Mercurial test repository NOT FOUND. Skipping functional tests !!!"

@@ -1006,10 +1006,14 @@ es:
   field_root_directory: Directorio raíz
   field_cvs_module: Módulo
   field_cvsroot: CVSROOT
-  text_git_repository_note: Repositorio local (bare repository) (e.g. /gitrepo, c:\gitrepo)
   text_mercurial_repository_note: Repositorio local (e.g. /hgrepo, c:\hgrepo)
   text_scm_command: Orden
   text_scm_command_version: Versión
   label_git_report_last_commit: Informar del último commit para ficheros y directorios
   text_scm_config: Puede configurar las órdenes de cada scm en configuration/configuration.yml. Por favor, reinicie la aplicación después de editarlo
   text_scm_command_not_available: La orden para el Scm no está disponible. Por favor, compruebe la configuración en el panel de administración.
+  notice_issue_successful_create: Issue %{id} created.
+  label_between: between
+  setting_issue_group_assignment: Allow issue assignment to groups
+  label_diff: diff
+  text_git_repository_note: Repository is bare and local (e.g. /gitrepo, c:\gitrepo)

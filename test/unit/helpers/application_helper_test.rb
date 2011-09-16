@@ -239,7 +239,7 @@ RAW
       'invalid:document:"Test document"'      => 'invalid:document:"Test document"',
       # versions
       'version:"1.0"'                         => 'version:"1.0"',
-      'ecookbook:version:"1.0"'               => '<a href="/versions/show/2" class="version">1.0</a>',
+      'ecookbook:version:"1.0"'               => '<a href="/versions/2" class="version">1.0</a>',
       'invalid:version:"1.0"'                 => 'invalid:version:"1.0"',
       # changeset
       'r2'                                    => 'r2',
@@ -674,5 +674,28 @@ RAW
                  link_to_project(project, {:only_path => false, :jump => 'blah'})
     assert_equal %(<a href="/projects/ecookbook/settings" class="project">eCookbook</a>),
                  link_to_project(project, {:action => 'settings'}, :class => "project")
+  end
+
+  def test_principals_options_for_select_with_users
+    users = [User.find(2), User.find(4)]
+    assert_equal %(<option value="2">John Smith</option><option value="4">Robert Hill</option>),
+      principals_options_for_select(users)
+  end
+
+  def test_principals_options_for_select_with_selected
+    users = [User.find(2), User.find(4)]
+    assert_equal %(<option value="2">John Smith</option><option value="4" selected="selected">Robert Hill</option>),
+      principals_options_for_select(users, User.find(4))
+  end
+
+  def test_principals_options_for_select_with_users_and_groups
+    users = [User.find(2), Group.find(11), User.find(4), Group.find(10)]
+    assert_equal %(<option value="2">John Smith</option><option value="4">Robert Hill</option>) +
+      %(<optgroup label="Groups"><option value="10">A Team</option><option value="11">B Team</option></optgroup>),
+      principals_options_for_select(users)
+  end
+
+  def test_principals_options_for_select_with_empty_collection
+    assert_equal '', principals_options_for_select([])
   end
 end

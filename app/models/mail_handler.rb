@@ -198,9 +198,9 @@ class MailHandler < ActionMailer::Base
   end
 
   def add_attachments(obj)
-    if email.has_attachments?
+    if email.attachments && email.attachments.any?
       email.attachments.each do |attachment|
-        Attachment.create(:container => obj,
+        obj.attachments << Attachment.create(:container => obj,
                           :file => attachment,
                           :author => user,
                           :content_type => attachment.content_type)
@@ -261,16 +261,15 @@ class MailHandler < ActionMailer::Base
 
   # Returns a Hash of issue attributes extracted from keywords in the email body
   def issue_attributes_from_keywords(issue)
-    assigned_to = (k = get_keyword(:assigned_to, :override => true)) && find_user_from_keyword(k)
-    assigned_to = nil if assigned_to && !issue.assignable_users.include?(assigned_to)
+    assigned_to = (k = get_keyword(:assigned_to, :override => true)) && find_assignee_from_keyword(k, issue)
 
     attrs = {
-      'tracker_id' => (k = get_keyword(:tracker)) && issue.project.trackers.find_by_name(k).try(:id),
-      'status_id' =>  (k = get_keyword(:status)) && IssueStatus.find_by_name(k).try(:id),
-      'priority_id' => (k = get_keyword(:priority)) && IssuePriority.find_by_name(k).try(:id),
-      'category_id' => (k = get_keyword(:category)) && issue.project.issue_categories.find_by_name(k).try(:id),
+      'tracker_id' => (k = get_keyword(:tracker)) && issue.project.trackers.named(k).first.try(:id),
+      'status_id' =>  (k = get_keyword(:status)) && IssueStatus.named(k).first.try(:id),
+      'priority_id' => (k = get_keyword(:priority)) && IssuePriority.named(k).first.try(:id),
+      'category_id' => (k = get_keyword(:category)) && issue.project.issue_categories.named(k).first.try(:id),
       'assigned_to_id' => assigned_to.try(:id),
-      'fixed_version_id' => (k = get_keyword(:fixed_version, :override => true)) && issue.project.shared_versions.find_by_name(k).try(:id),
+      'fixed_version_id' => (k = get_keyword(:fixed_version, :override => true)) && issue.project.shared_versions.named(k).first.try(:id),
       'start_date' => get_keyword(:start_date, :override => true, :format => '\d{4}-\d{2}-\d{2}'),
       'due_date' => get_keyword(:due_date, :override => true, :format => '\d{4}-\d{2}-\d{2}'),
       'estimated_hours' => get_keyword(:estimated_hours, :override => true),
@@ -354,13 +353,18 @@ class MailHandler < ActionMailer::Base
     body.strip
   end
 
-  def find_user_from_keyword(keyword)
-    user ||= User.find_by_mail(keyword)
-    user ||= User.find_by_login(keyword)
-    if user.nil? && keyword.match(/ /)
+  def find_assignee_from_keyword(keyword, issue)
+    keyword = keyword.to_s.downcase
+    assignable = issue.assignable_users
+    assignee = nil
+    assignee ||= assignable.detect {|a| a.mail.to_s.downcase == keyword || a.login.to_s.downcase == keyword}
+    if assignee.nil? && keyword.match(/ /)
       firstname, lastname = *(keyword.split) # "First Last Throwaway"
-      user ||= User.find_by_firstname_and_lastname(firstname, lastname)
+      assignee ||= assignable.detect {|a| a.is_a?(User) && a.firstname.to_s.downcase == firstname && a.lastname.to_s.downcase == lastname}
     end
-    user
+    if assignee.nil?
+      assignee ||= assignable.detect {|a| a.is_a?(Group) && a.name.downcase == keyword}
+    end
+    assignee
   end
 end

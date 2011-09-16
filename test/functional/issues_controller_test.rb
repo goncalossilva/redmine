@@ -18,9 +18,6 @@
 require File.expand_path('../../test_helper', __FILE__)
 require 'issues_controller'
 
-# Re-raise errors caught by the controller.
-class IssuesController; def rescue_action(e) raise e end; end
-
 class IssuesControllerTest < ActionController::TestCase
   fixtures :projects,
            :users,
@@ -58,7 +55,7 @@ class IssuesControllerTest < ActionController::TestCase
 
     get :index
     assert_response :success
-    assert_template 'index.rhtml'
+    assert_template 'index'
     assert_not_nil assigns(:issues)
     assert_nil assigns(:project)
     assert_tag :tag => 'a', :content => /Can't print recipes/
@@ -74,18 +71,7 @@ class IssuesControllerTest < ActionController::TestCase
     EnabledModule.delete_all("name = 'issue_tracking' AND project_id = 1")
     get :index
     assert_response :success
-    assert_template 'index.rhtml'
-    assert_not_nil assigns(:issues)
-    assert_nil assigns(:project)
-    assert_no_tag :tag => 'a', :content => /Can't print recipes/
-    assert_tag :tag => 'a', :content => /Subproject issue/
-  end
-
-  def test_index_should_not_list_issues_when_module_disabled
-    EnabledModule.delete_all("name = 'issue_tracking' AND project_id = 1")
-    get :index
-    assert_response :success
-    assert_template 'index.rhtml'
+    assert_template 'index'
     assert_not_nil assigns(:issues)
     assert_nil assigns(:project)
     assert_no_tag :tag => 'a', :content => /Can't print recipes/
@@ -103,7 +89,7 @@ class IssuesControllerTest < ActionController::TestCase
     Setting.display_subprojects_issues = 0
     get :index, :project_id => 1
     assert_response :success
-    assert_template 'index.rhtml'
+    assert_template 'index'
     assert_not_nil assigns(:issues)
     assert_tag :tag => 'a', :content => /Can't print recipes/
     assert_no_tag :tag => 'a', :content => /Subproject issue/
@@ -113,7 +99,7 @@ class IssuesControllerTest < ActionController::TestCase
     Setting.display_subprojects_issues = 1
     get :index, :project_id => 1
     assert_response :success
-    assert_template 'index.rhtml'
+    assert_template 'index'
     assert_not_nil assigns(:issues)
     assert_tag :tag => 'a', :content => /Can't print recipes/
     assert_tag :tag => 'a', :content => /Subproject issue/
@@ -125,7 +111,7 @@ class IssuesControllerTest < ActionController::TestCase
     Setting.display_subprojects_issues = 1
     get :index, :project_id => 1
     assert_response :success
-    assert_template 'index.rhtml'
+    assert_template 'index'
     assert_not_nil assigns(:issues)
     assert_tag :tag => 'a', :content => /Can't print recipes/
     assert_tag :tag => 'a', :content => /Subproject issue/
@@ -135,7 +121,7 @@ class IssuesControllerTest < ActionController::TestCase
   def test_index_with_project_and_default_filter
     get :index, :project_id => 1, :set_filter => 1
     assert_response :success
-    assert_template 'index.rhtml'
+    assert_template 'index'
     assert_not_nil assigns(:issues)
 
     query = assigns(:query)
@@ -150,7 +136,7 @@ class IssuesControllerTest < ActionController::TestCase
       :op => {'tracker_id' => '='},
       :v => {'tracker_id' => ['1']}
     assert_response :success
-    assert_template 'index.rhtml'
+    assert_template 'index'
     assert_not_nil assigns(:issues)
 
     query = assigns(:query)
@@ -161,7 +147,7 @@ class IssuesControllerTest < ActionController::TestCase
   def test_index_with_project_and_empty_filters
     get :index, :project_id => 1, :set_filter => 1, :fields => ['']
     assert_response :success
-    assert_template 'index.rhtml'
+    assert_template 'index'
     assert_not_nil assigns(:issues)
 
     query = assigns(:query)
@@ -173,7 +159,7 @@ class IssuesControllerTest < ActionController::TestCase
   def test_index_with_query
     get :index, :project_id => 1, :query_id => 5
     assert_response :success
-    assert_template 'index.rhtml'
+    assert_template 'index'
     assert_not_nil assigns(:issues)
     assert_nil assigns(:issue_count_by_group)
   end
@@ -181,7 +167,7 @@ class IssuesControllerTest < ActionController::TestCase
   def test_index_with_query_grouped_by_tracker
     get :index, :project_id => 1, :query_id => 6
     assert_response :success
-    assert_template 'index.rhtml'
+    assert_template 'index'
     assert_not_nil assigns(:issues)
     assert_not_nil assigns(:issue_count_by_group)
   end
@@ -189,9 +175,33 @@ class IssuesControllerTest < ActionController::TestCase
   def test_index_with_query_grouped_by_list_custom_field
     get :index, :project_id => 1, :query_id => 9
     assert_response :success
-    assert_template 'index.rhtml'
+    assert_template 'index'
     assert_not_nil assigns(:issues)
     assert_not_nil assigns(:issue_count_by_group)
+  end
+
+  def test_private_query_should_not_be_available_to_other_users
+    q = Query.create!(:name => "private", :user => User.find(2), :is_public => false, :project => nil)
+    @request.session[:user_id] = 3
+
+    get :index, :query_id => q.id
+    assert_response 403
+  end
+
+  def test_private_query_should_be_available_to_its_user
+    q = Query.create!(:name => "private", :user => User.find(2), :is_public => false, :project => nil)
+    @request.session[:user_id] = 2
+
+    get :index, :query_id => q.id
+    assert_response :success
+  end
+
+  def test_public_query_should_be_available_to_other_users
+    q = Query.create!(:name => "private", :user => User.find(2), :is_public => true, :project => nil)
+    @request.session[:user_id] = 3
+
+    get :index, :query_id => q.id
+    assert_response :success
   end
 
   def test_index_sort_by_field_not_included_in_columns
@@ -290,10 +300,22 @@ class IssuesControllerTest < ActionController::TestCase
       :ancestor => {:tag => 'table', :attributes => {:class => /issues/}}
   end
 
+  def test_index_send_html_if_query_is_invalid
+    get :index, :f => ['start_date'], :op => {:start_date => '='}
+    assert_equal 'text/html', @response.content_type
+    assert_template 'index'
+  end
+
+  def test_index_send_nothing_if_query_is_invalid
+    get :index, :f => ['start_date'], :op => {:start_date => '='}, :format => 'csv'
+    assert_equal 'text/csv', @response.content_type
+    assert @response.body.blank?
+  end
+
   def test_show_by_anonymous
     get :show, :id => 1
     assert_response :success
-    assert_template 'show.rhtml'
+    assert_template 'show'
     assert_not_nil assigns(:issue)
     assert_equal Issue.find(1), assigns(:issue)
 
@@ -332,6 +354,18 @@ class IssuesControllerTest < ActionController::TestCase
     assert ! IssuePriority.find(15).active?
     assert_no_tag :option, :attributes => {:value => '15'},
                            :parent => {:tag => 'select', :attributes => {:id => 'issue_priority_id'} }
+  end
+
+  def test_update_form_should_allow_attachment_upload
+    @request.session[:user_id] = 2
+    get :show, :id => 1
+
+    assert_tag :tag => 'form',
+      :attributes => {:id => 'issue-form', :method => 'post', :enctype => 'multipart/form-data'},
+      :descendant => {
+        :tag => 'input',
+        :attributes => {:type => 'file', :name => 'attachments[1][file]'}
+      }
   end
 
   def test_show_should_deny_anonymous_access_without_permission
@@ -442,6 +476,18 @@ class IssuesControllerTest < ActionController::TestCase
                            :parent => {:tag => 'select', :attributes => {:id => 'issue_priority_id'} }
   end
 
+  def test_get_new_form_should_allow_attachment_upload
+    @request.session[:user_id] = 2
+    get :new, :project_id => 1, :tracker_id => 1
+
+    assert_tag :tag => 'form',
+      :attributes => {:id => 'issue-form', :method => 'post', :enctype => 'multipart/form-data'},
+      :descendant => {
+        :tag => 'input',
+        :attributes => {:type => 'file', :name => 'attachments[1][file]'}
+      }
+  end
+
   def test_get_new_without_tracker_id
     @request.session[:user_id] = 2
     get :new, :project_id => 1
@@ -515,6 +561,28 @@ class IssuesControllerTest < ActionController::TestCase
     assert_equal 'Value for field 2', v.value
   end
 
+  def test_post_new_with_group_assignment
+    group = Group.find(11)
+    project = Project.find(1)
+    project.members << Member.new(:principal => group, :roles => [Role.first])
+
+    with_settings :issue_group_assignment => '1' do
+      @request.session[:user_id] = 2
+      assert_difference 'Issue.count' do
+        post :create, :project_id => project.id,
+                      :issue => {:tracker_id => 3,
+                                 :status_id => 1,
+                                 :subject => 'This is the test_new_with_group_assignment issue',
+                                 :assigned_to_id => group.id}
+      end
+    end
+    assert_redirected_to :controller => 'issues', :action => 'show', :id => Issue.last.id
+
+    issue = Issue.find_by_subject('This is the test_new_with_group_assignment issue')
+    assert_not_nil issue
+    assert_equal group, issue.assigned_to
+  end
+
   def test_post_create_without_start_date
     @request.session[:user_id] = 2
     assert_difference 'Issue.count' do
@@ -537,13 +605,16 @@ class IssuesControllerTest < ActionController::TestCase
 
   def test_post_create_and_continue
     @request.session[:user_id] = 2
-    post :create, :project_id => 1,
-               :issue => {:tracker_id => 3,
-                          :subject => 'This is first issue',
-                          :priority_id => 5},
-               :continue => ''
-    assert_redirected_to :controller => 'issues', :action => 'new', :project_id => 'ecookbook',
-                         :issue => {:tracker_id => 3}
+    assert_difference 'Issue.count' do
+      post :create, :project_id => 1,
+        :issue => {:tracker_id => 3, :subject => 'This is first issue', :priority_id => 5},
+        :continue => ''
+    end
+
+    issue = Issue.first(:order => 'id DESC')
+    assert_redirected_to :controller => 'issues', :action => 'new', :project_id => 'ecookbook', :issue => {:tracker_id => 3}
+    assert_not_nil flash[:notice], "flash was not set"
+    assert flash[:notice].include?("<a href='/issues/#{issue.id}'>##{issue.id}</a>"), "issue link not found in flash: #{flash[:notice]}"
   end
 
   def test_post_create_without_custom_fields_param
@@ -627,7 +698,7 @@ class IssuesControllerTest < ActionController::TestCase
     assert_not_nil issue
     assert_nil issue.parent
   end
-  
+
   def test_post_create_private
     @request.session[:user_id] = 2
 
@@ -640,12 +711,12 @@ class IssuesControllerTest < ActionController::TestCase
     issue = Issue.first(:order => 'id DESC')
     assert issue.is_private?
   end
-  
+
   def test_post_create_private_with_set_own_issues_private_permission
     role = Role.find(1)
     role.remove_permission! :set_issues_private
     role.add_permission! :set_own_issues_private
-    
+
     @request.session[:user_id] = 2
 
     assert_difference 'Issue.count' do
@@ -707,6 +778,31 @@ class IssuesControllerTest < ActionController::TestCase
     assert_nothing_raised do
       post :create, :project_id => 1, :issue => { :tracker => "A param can not be a Tracker" }
     end
+  end
+
+  def test_post_create_with_attachment
+    set_tmp_attachments_directory
+    @request.session[:user_id] = 2
+
+    assert_difference 'Issue.count' do
+      assert_difference 'Attachment.count' do
+        post :create, :project_id => 1,
+          :issue => { :tracker_id => '1', :subject => 'With attachment' },
+          :attachments => {'1' => {'file' => uploaded_test_file('testfile.txt', 'text/plain'), 'description' => 'test file'}}
+      end
+    end
+
+    issue = Issue.first(:order => 'id DESC')
+    attachment = Attachment.first(:order => 'id DESC')
+
+    assert_equal issue, attachment.container
+    assert_equal 2, attachment.author_id
+    assert_equal 'testfile.txt', attachment.filename
+    assert_equal 'text/plain', attachment.content_type
+    assert_equal 'test file', attachment.description
+    assert_equal 59, attachment.filesize
+    assert File.exists?(attachment.diskfile)
+    assert_equal 59, File.size(attachment.diskfile)
   end
 
   context "without workflow privilege" do
@@ -1046,16 +1142,28 @@ class IssuesControllerTest < ActionController::TestCase
     Journal.delete_all
 
     # anonymous user
-    put :update,
-         :id => 1,
-         :notes => '',
-         :attachments => {'1' => {'file' => uploaded_test_file('testfile.txt', 'text/plain')}}
+    assert_difference 'Attachment.count' do
+      put :update, :id => 1,
+        :notes => '',
+        :attachments => {'1' => {'file' => uploaded_test_file('testfile.txt', 'text/plain'), 'description' => 'test file'}}
+    end
+
     assert_redirected_to :action => 'show', :id => '1'
     j = Issue.find(1).journals.find(:first, :order => 'id DESC')
     assert j.notes.blank?
     assert_equal 1, j.details.size
     assert_equal 'testfile.txt', j.details.first.value
     assert_equal User.anonymous, j.user
+
+    attachment = Attachment.first(:order => 'id DESC')
+    assert_equal Issue.find(1), attachment.container
+    assert_equal User.anonymous, attachment.author
+    assert_equal 'testfile.txt', attachment.filename
+    assert_equal 'text/plain', attachment.content_type
+    assert_equal 'test file', attachment.description
+    assert_equal 59, attachment.filesize
+    assert File.exists?(attachment.diskfile)
+    assert_equal 59, File.size(attachment.diskfile)
 
     mail = ActionMailer::Base.deliveries.last
     assert mail.body.include?('testfile.txt')
@@ -1283,6 +1391,22 @@ class IssuesControllerTest < ActionController::TestCase
     assert_equal '125', issue.custom_value_for(2).value
     assert_equal 'Bulk editing', journal.notes
     assert_equal 1, journal.details.size
+  end
+
+  def test_bulk_update_with_group_assignee
+    group = Group.find(11)
+    project = Project.find(1)
+    project.members << Member.new(:principal => group, :roles => [Role.first])
+
+    @request.session[:user_id] = 2
+    # update issues assignee
+    post :bulk_update, :ids => [1, 2], :notes => 'Bulk editing',
+                                     :issue => {:priority_id => '',
+                                                :assigned_to_id => group.id,
+                                                :custom_field_values => {'2' => ''}}
+
+    assert_response 302
+    assert_equal [group, group], Issue.find_all_by_id([1, 2]).collect {|i| i.assigned_to}
   end
 
   def test_bulk_update_on_different_projects
