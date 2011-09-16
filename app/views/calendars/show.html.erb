@@ -1,6 +1,6 @@
 <h2><%= @query.new_record? ? l(:label_calendar) : h(@query.name) %></h2>
 
-<% form_tag({:controller => 'calendars', :action => 'show', :project_id => @project}, :method => :get, :id => 'query_form') do %>
+<%= form_tag({:controller => 'calendars', :action => 'show', :project_id => @project}, :method => :get, :id => 'query_form') do %>
 <%= hidden_field_tag 'set_filter', '1' %>
 <fieldset id="filters" class="collapsible <%= @query.new_record? ? "" : "collapsed" %>">
   <legend onclick="toggleFieldset(this);"><%= l(:label_filter_plural) %></legend>
@@ -29,9 +29,9 @@
 <%= render :partial => 'common/calendar', :locals => {:calendar => @calendar} %>
 
 <p class="legend cal">
-	<span class="starting"><%= l(:text_tip_issue_begin_day) %></span>
-	<span class="ending"><%= l(:text_tip_issue_end_day) %></span>
-	<span class="starting ending"><%= l(:text_tip_issue_begin_end_day) %></span>
+  <span class="starting"><%= l(:text_tip_issue_begin_day) %></span>
+  <span class="ending"><%= l(:text_tip_issue_end_day) %></span>
+  <span class="starting ending"><%= l(:text_tip_issue_begin_end_day) %></span>
 </p>
 <% end %>
 
