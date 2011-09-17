@@ -29,8 +29,8 @@
   </tbody>
 </table>
 
-<% other_formats_links do |f| %>
-  <%= f.link_to 'Atom', :url => {:controller => 'activities', :action => 'index', :id => @project, :show_messages => 1, :key => User.current.rss_key} %>
+<%= other_formats_links do |f| %>
+  <% f.link_to 'Atom', :url => {:controller => 'activities', :action => 'index', :id => @project, :show_messages => 1, :key => User.current.rss_key} %>
 <% end %>
 
 <% content_for :header_tags do %>
