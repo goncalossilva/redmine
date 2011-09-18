@@ -8,7 +8,7 @@
 
 <div class="splitcontentleft">
   <div class="wiki">
-    <%= textilizable @project.description %>
+    <%= raw textilizable @project.description %>
   </div>
   <ul>
   <% unless @project.homepage.blank? %><li><%=l(:field_homepage)%>: <%= auto_link(h(@project.homepage)) %></li><% end %>
