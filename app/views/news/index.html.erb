@@ -11,7 +11,8 @@
                                            :html => { :id => 'news-form' } do |f| %>
 <%= render :partial => 'news/form', :locals => { :f => f } %>
 <%= submit_tag l(:button_create) %>
-<%= link_to l(:label_preview), preview_news_path(:project_id => @project), {
+<%= link_to l(:label_preview), preview_news_path(:project_id => @project),
+                      {
                      :remote => true,
                      :method => 'get',
                      :update => 'preview',
@@ -40,7 +41,7 @@
 <p class="pagination"><%= pagination_links_full @news_pages %></p>
 
 <%= other_formats_links do |f| %>
-	<% f.link_to 'Atom', :url => {:project_id => @project, :key => User.current.rss_key} %>
+  <% f.link_to 'Atom', :url => {:project_id => @project, :key => User.current.rss_key} %>
 <% end %>
 
 <% content_for :header_tags do %>

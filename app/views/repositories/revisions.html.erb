@@ -9,7 +9,7 @@
 
 <%= render :partial => 'revisions',
            :locals => {:project   => @project,
-                       :path      => '', 
+                       :path      => '',
                        :revisions => @changesets,
                        :entry     => nil } %>
 
@@ -24,7 +24,7 @@
 <% end %>
 
 <%= other_formats_links do |f| %>
-	<% f.link_to 'Atom', :url => {:key => User.current.rss_key} %>
+  <% f.link_to 'Atom', :url => {:key => User.current.rss_key} %>
 <% end %>
 
 <% html_title(l(:label_revision_plural)) -%>

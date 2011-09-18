@@ -36,8 +36,8 @@ ContextMenu.prototype = {
 
   Click: function(e) {
   	this.hideMenu();
-  	if (Event.element(e).tagName == 'A') { return; }
-    if (!Event.isRightClick(e) || (navigator.appVersion.match(/\bMSIE\b/))) {      
+  	if (Event.element(e).tagName == 'A' || Event.element(e).tagName == 'IMG') { return; }
+    if (Event.isLeftClick(e) || (navigator.appVersion.match(/\bMSIE\b/))) {      
       var tr = Event.findElement(e, 'tr');
       if (tr!=null && tr!=document && tr.hasClassName('hascontextmenu')) {
         // a row was clicked, check if the click was on checkbox

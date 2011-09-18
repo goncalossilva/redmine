@@ -20,7 +20,7 @@
     <small>
       <% if board.last_message %>
       <%= authoring board.last_message.created_on, board.last_message.author %><br />
-      <%= link_to_message board.last_message %>  
+      <%= link_to_message board.last_message %>
       <% end %>
     </small>
     </td>
@@ -29,8 +29,8 @@
   </tbody>
 </table>
 
-<% other_formats_links do |f| %>
-	<% f.link_to 'Atom', :url => {:controller => 'activities', :action => 'index', :id => @project, :show_messages => 1, :key => User.current.rss_key} %>
+<%= other_formats_links do |f| %>
+  <% f.link_to 'Atom', :url => {:controller => 'activities', :action => 'index', :id => @project, :show_messages => 1, :key => User.current.rss_key} %>
 <% end %>
 
 <% content_for :header_tags do %>
