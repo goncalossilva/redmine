@@ -29,6 +29,7 @@ class RepositoriesGitControllerTest < ActionController::TestCase
   REPOSITORY_PATH.gsub!(/\//, "\\") if Redmine::Platform.mswin?
   PRJ_ID     = 3
   CHAR_1_HEX = "\xc3\x9c"
+  NUM_REV = 21
 
   ## Git, Mercurial and CVS path encodings are binary.
   ## Subversion supports URL encoding for path.
@@ -63,8 +64,11 @@ class RepositoriesGitControllerTest < ActionController::TestCase
 
   if File.directory?(REPOSITORY_PATH)
     def test_browse_root
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
+
       get :show, :id => PRJ_ID
       assert_response :success
       assert_template 'show'
@@ -84,8 +88,10 @@ class RepositoriesGitControllerTest < ActionController::TestCase
     end
 
     def test_browse_branch
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       get :show, :id => PRJ_ID, :rev => 'test_branch'
       assert_response :success
       assert_template 'show'
@@ -100,8 +106,10 @@ class RepositoriesGitControllerTest < ActionController::TestCase
     end
 
     def test_browse_tag
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
        [
         "tag00.lightweight",
         "tag01.annotated",
@@ -117,8 +125,10 @@ class RepositoriesGitControllerTest < ActionController::TestCase
     end
 
     def test_browse_directory
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       get :show, :id => PRJ_ID, :path => ['images']
       assert_response :success
       assert_template 'show'
@@ -133,8 +143,10 @@ class RepositoriesGitControllerTest < ActionController::TestCase
     end
 
     def test_browse_at_given_revision
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       get :show, :id => PRJ_ID, :path => ['images'],
           :rev => '7234cb2750b63f47bff735edc50a1c0a433c2518'
       assert_response :success
@@ -202,8 +214,10 @@ class RepositoriesGitControllerTest < ActionController::TestCase
     end
 
     def test_diff
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       # Full diff of changeset 2f9c0091
       ['inline', 'sbs'].each do |dt|
         get :diff,
@@ -223,8 +237,10 @@ class RepositoriesGitControllerTest < ActionController::TestCase
     end
 
     def test_diff_truncated
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       Setting.diff_max_lines_displayed = 5
 
       # Truncated diff of changeset 2f9c0091
@@ -244,8 +260,10 @@ class RepositoriesGitControllerTest < ActionController::TestCase
     end
 
     def test_diff_two_revs
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       ['inline', 'sbs'].each do |dt|
         get :diff,
             :id     => PRJ_ID,
@@ -318,8 +336,10 @@ class RepositoriesGitControllerTest < ActionController::TestCase
     end
 
     def test_annotate_at_given_revision
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       get :annotate, :id => PRJ_ID, :rev => 'deff7',
           :path => ['sources', 'watchers_controller.rb']
       assert_response :success
@@ -355,8 +375,10 @@ class RepositoriesGitControllerTest < ActionController::TestCase
     end
 
     def test_revision
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       ['61b685fbe55ab05b5ac68402d5720c1a6ac973d1', '61b685f'].each do |r|
         get :revision, :id => PRJ_ID, :rev => r
         assert_response :success
@@ -365,8 +387,10 @@ class RepositoriesGitControllerTest < ActionController::TestCase
     end
 
     def test_empty_revision
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
       ['', ' ', nil].each do |r|
         get :revision, :id => PRJ_ID, :rev => r
         assert_response 404
@@ -376,9 +400,10 @@ class RepositoriesGitControllerTest < ActionController::TestCase
 
     def test_destroy_valid_repository
       @request.session[:user_id] = 1 # admin
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
-      assert @repository.changesets.count > 0
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
 
       get :destroy, :id => PRJ_ID
       assert_response 302
@@ -388,9 +413,10 @@ class RepositoriesGitControllerTest < ActionController::TestCase
 
     def test_destroy_invalid_repository
       @request.session[:user_id] = 1 # admin
+      assert_equal 0, @repository.changesets.count
       @repository.fetch_changesets
-      @repository.reload
-      assert @repository.changesets.count > 0
+      @project.reload
+      assert_equal NUM_REV, @repository.changesets.count
 
       get :destroy, :id => PRJ_ID
       assert_response 302

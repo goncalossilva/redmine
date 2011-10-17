@@ -43,11 +43,10 @@ class WikiPage < ActiveRecord::Base
   validates_associated :content
 
   validate :validate_parent_title
-
   before_destroy :remove_redirects
   before_save :handle_redirects
   after_initialize :protect_page
-  
+
   # eager load information about last updates, without loading text
   scope :with_updated_on, {
     :select => "#{WikiPage.table_name}.*, #{WikiContent.table_name}.updated_on",

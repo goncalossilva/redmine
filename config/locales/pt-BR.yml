@@ -961,7 +961,7 @@ pt-BR:
   setting_commit_logtime_enabled: Habilitar registro de horas
   notice_gantt_chart_truncated: O gráfico foi cortado por exceder o tamanho máximo de linhas que podem ser exibidas (%{max})
   setting_gantt_items_limit: Número máximo de itens exibidos no gráfico gatt
-  field_warn_on_leaving_unsaved: Alertar-me ao sarir de uma página sem salvar o texto
+  field_warn_on_leaving_unsaved: Alertar-me ao sair de uma página sem salvar o texto
   text_warn_on_leaving_unsaved: A página atual contem texto que não foi salvo e será perdido se você sair desta página.
   label_my_queries: Minhas consultas personalizadas
   text_journal_changed_no_detail: "%{label} atualizado(a)"
@@ -990,8 +990,7 @@ pt-BR:
   field_root_directory: Diretório raiz
   field_cvs_module: Módulo
   field_cvsroot: CVSROOT
-  text_git_repository_note: Bare and local repository (e.g. /gitrepo, c:\gitrepo)
-  text_mercurial_repository_note: "repositório local (ex.: /hgrepo, c:\hgrepo)"
+  text_mercurial_repository_note: "Repositório local (ex.: /hgrepo, c:\\hgrepo)"
   text_scm_command: Comando
   text_scm_command_version: Versão
   label_git_report_last_commit: Relatar última alteração para arquivos e diretórios
@@ -1001,3 +1000,4 @@ pt-BR:
   label_between: between
   setting_issue_group_assignment: Allow issue assignment to groups
   label_diff: diff
+  text_git_repository_note: Repository is bare and local (e.g. /gitrepo, c:\gitrepo)
